@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 import {
   LayoutGrid,
   Globe,
@@ -99,7 +100,14 @@ const NavSection = ({
 
 export function Sidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { signOut } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
 
   return (
     <aside
@@ -136,7 +144,10 @@ export function Sidebar() {
       {/* Bottom Section */}
       <div className="border-t border-sidebar-border p-3">
         <NavSection items={bottomItems} currentPath={location.pathname} />
-        <button className="mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-destructive/80 transition-all duration-200 hover:bg-destructive/10 hover:text-destructive">
+        <button 
+          onClick={handleSignOut}
+          className="mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-destructive/80 transition-all duration-200 hover:bg-destructive/10 hover:text-destructive"
+        >
           <LogOut className="h-4 w-4" />
           {!isCollapsed && <span>Sign Out</span>}
         </button>
