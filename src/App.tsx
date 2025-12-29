@@ -11,6 +11,12 @@ import Sites from "./pages/Sites";
 import CreateSite from "./pages/CreateSite";
 import SiteSettings from "./pages/SiteSettings";
 import AdminSettings from "./pages/AdminSettings";
+import AdminPanel from "./pages/AdminPanel";
+import Commissions from "./pages/Commissions";
+import Announcements from "./pages/Announcements";
+import Bots from "./pages/Bots";
+import Signals from "./pages/Signals";
+import Support from "./pages/Support";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,15 +35,16 @@ const App = () => (
             <Route path="/sites/create" element={<ProtectedRoute><CreateSite /></ProtectedRoute>} />
             <Route path="/sites/:siteId/settings" element={<ProtectedRoute><SiteSettings /></ProtectedRoute>} />
             <Route path="/admin/settings" element={<ProtectedRoute requireAdmin><AdminSettings /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminPanel /></ProtectedRoute>} />
             <Route path="/domains" element={<ProtectedRoute><Sites /></ProtectedRoute>} />
             <Route path="/updates" element={<ProtectedRoute><Sites /></ProtectedRoute>} />
             <Route path="/deployments" element={<ProtectedRoute><Sites /></ProtectedRoute>} />
-            <Route path="/commissions" element={<ProtectedRoute><Sites /></ProtectedRoute>} />
-            <Route path="/announcements" element={<ProtectedRoute><Sites /></ProtectedRoute>} />
+            <Route path="/commissions" element={<ProtectedRoute><Commissions /></ProtectedRoute>} />
+            <Route path="/announcements" element={<ProtectedRoute><Announcements /></ProtectedRoute>} />
             <Route path="/editor" element={<ProtectedRoute><Sites /></ProtectedRoute>} />
-            <Route path="/bots" element={<ProtectedRoute><Sites /></ProtectedRoute>} />
-            <Route path="/signals" element={<ProtectedRoute><Sites /></ProtectedRoute>} />
-            <Route path="/support" element={<ProtectedRoute><Sites /></ProtectedRoute>} />
+            <Route path="/bots" element={<ProtectedRoute><Bots /></ProtectedRoute>} />
+            <Route path="/signals" element={<ProtectedRoute><Signals /></ProtectedRoute>} />
+            <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><AdminSettings /></ProtectedRoute>} />
             <Route path="/theme" element={<ProtectedRoute><Sites /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
