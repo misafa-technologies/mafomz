@@ -14,6 +14,204 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_signals: {
+        Row: {
+          asset: string
+          confidence: number | null
+          created_at: string
+          entry_price: number | null
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          signal_type: string
+          site_id: string | null
+          stop_loss: number | null
+          target_price: number | null
+          timeframe: string | null
+        }
+        Insert: {
+          asset: string
+          confidence?: number | null
+          created_at?: string
+          entry_price?: number | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          signal_type: string
+          site_id?: string | null
+          stop_loss?: number | null
+          target_price?: number | null
+          timeframe?: string | null
+        }
+        Update: {
+          asset?: string
+          confidence?: number | null
+          created_at?: string
+          entry_price?: number | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          signal_type?: string
+          site_id?: string | null
+          stop_loss?: number | null
+          target_price?: number | null
+          timeframe?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_signals_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      announcements: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string | null
+          ends_at: string | null
+          id: string
+          is_active: boolean | null
+          starts_at: string | null
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          starts_at?: string | null
+          title: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          starts_at?: string | null
+          title?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      bot_configs: {
+        Row: {
+          asset: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          site_id: string | null
+          trade_type: string | null
+          updated_at: string
+          user_id: string
+          xml_content: string
+        }
+        Insert: {
+          asset?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          site_id?: string | null
+          trade_type?: string | null
+          updated_at?: string
+          user_id: string
+          xml_content: string
+        }
+        Update: {
+          asset?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          site_id?: string | null
+          trade_type?: string | null
+          updated_at?: string
+          user_id?: string
+          xml_content?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bot_configs_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commissions: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          deriv_loginid: string
+          id: string
+          metadata: Json | null
+          period_end: string | null
+          period_start: string | null
+          site_id: string | null
+          status: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          deriv_loginid: string
+          id?: string
+          metadata?: Json | null
+          period_end?: string | null
+          period_start?: string | null
+          site_id?: string | null
+          status?: string
+          type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          deriv_loginid?: string
+          id?: string
+          metadata?: Json | null
+          period_end?: string | null
+          period_start?: string | null
+          site_id?: string | null
+          status?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commissions_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_settings: {
         Row: {
           id: string
@@ -133,6 +331,88 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      support_tickets: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          description: string
+          id: string
+          priority: string
+          site_id: string | null
+          status: string
+          subject: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          priority?: string
+          site_id?: string | null
+          status?: string
+          subject: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          priority?: string
+          site_id?: string | null
+          status?: string
+          subject?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ticket_messages: {
+        Row: {
+          created_at: string
+          id: string
+          is_staff: boolean | null
+          message: string
+          ticket_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_staff?: boolean | null
+          message: string
+          ticket_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_staff?: boolean | null
+          message?: string
+          ticket_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
