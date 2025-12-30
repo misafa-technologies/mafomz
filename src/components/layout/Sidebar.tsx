@@ -15,7 +15,7 @@ import {
   Settings,
   Palette,
   LogOut,
-  ChevronDown,
+  Shield,
   Zap,
 } from "lucide-react";
 
@@ -24,7 +24,7 @@ interface NavItem {
   icon: React.ElementType;
   href: string;
   badge?: string;
-  children?: NavItem[];
+  adminOnly?: boolean;
 }
 
 const tradingPlatformItems: NavItem[] = [
@@ -33,7 +33,7 @@ const tradingPlatformItems: NavItem[] = [
   { label: "Platform Updates", icon: Rocket, href: "/updates" },
   { label: "Deployments", icon: Zap, href: "/deployments" },
   { label: "Commissions", icon: DollarSign, href: "/commissions" },
-  { label: "Announcements", icon: Bell, href: "/announcements", badge: "2" },
+  { label: "Announcements", icon: Bell, href: "/announcements" },
 ];
 
 const toolsItems: NavItem[] = [
@@ -45,18 +45,24 @@ const toolsItems: NavItem[] = [
 const bottomItems: NavItem[] = [
   { label: "Support", icon: HelpCircle, href: "/support" },
   { label: "Settings", icon: Settings, href: "/settings" },
-  { label: "Theme", icon: Palette, href: "/theme" },
+  { label: "Admin Panel", icon: Shield, href: "/admin", adminOnly: true },
 ];
 
 const NavSection = ({
   title,
   items,
   currentPath,
+  isAdmin = false,
 }: {
   title?: string;
   items: NavItem[];
   currentPath: string;
+  isAdmin?: boolean;
 }) => {
+  const filteredItems = items.filter(item => !item.adminOnly || isAdmin);
+  
+  if (filteredItems.length === 0) return null;
+  
   return (
     <div className="space-y-1">
       {title && (
@@ -64,8 +70,8 @@ const NavSection = ({
           {title}
         </p>
       )}
-      {items.map((item) => {
-        const isActive = currentPath === item.href;
+      {filteredItems.map((item) => {
+        const isActive = currentPath === item.href || currentPath.startsWith(item.href + '/');
         const Icon = item.icon;
 
         return (
@@ -101,7 +107,7 @@ const NavSection = ({
 export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { signOut } = useAuth();
+  const { signOut, isAdmin, user } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const handleSignOut = async () => {
@@ -123,13 +129,23 @@ export function Sidebar() {
         </div>
         {!isCollapsed && (
           <div className="flex flex-col">
-            <span className="text-lg font-bold text-foreground">DerivForge</span>
+            <span className="text-lg font-bold text-foreground">Mafomz</span>
             <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
-              by Mafomz
+              Trading Platform Builder
             </span>
           </div>
         )}
       </div>
+
+      {/* User Info */}
+      {!isCollapsed && user && (
+        <div className="border-b border-sidebar-border px-4 py-3">
+          <p className="text-sm font-medium text-foreground truncate">{user.email}</p>
+          <p className="text-xs text-muted-foreground">
+            {isAdmin ? "Administrator" : "Member"}
+          </p>
+        </div>
+      )}
 
       {/* Navigation */}
       <nav className="flex-1 space-y-6 overflow-y-auto p-3">
@@ -137,13 +153,23 @@ export function Sidebar() {
           title="Trading Platform"
           items={tradingPlatformItems}
           currentPath={location.pathname}
+          isAdmin={isAdmin}
         />
-        <NavSection items={toolsItems} currentPath={location.pathname} />
+        <NavSection 
+          title="Tools" 
+          items={toolsItems} 
+          currentPath={location.pathname}
+          isAdmin={isAdmin}
+        />
       </nav>
 
       {/* Bottom Section */}
       <div className="border-t border-sidebar-border p-3">
-        <NavSection items={bottomItems} currentPath={location.pathname} />
+        <NavSection 
+          items={bottomItems} 
+          currentPath={location.pathname}
+          isAdmin={isAdmin}
+        />
         <button 
           onClick={handleSignOut}
           className="mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-destructive/80 transition-all duration-200 hover:bg-destructive/10 hover:text-destructive"
@@ -157,7 +183,7 @@ export function Sidebar() {
       {!isCollapsed && (
         <div className="border-t border-sidebar-border p-4">
           <p className="text-center text-[10px] text-muted-foreground/50">
-            © 2025 DerivForge
+            © 2025 Mafomz
           </p>
         </div>
       )}

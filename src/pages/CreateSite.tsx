@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowRight,
@@ -12,6 +12,7 @@ import {
   Shield,
   Upload,
   Check,
+  Loader2,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { StepIndicator } from "@/components/create-site/StepIndicator";
@@ -29,6 +30,9 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 const steps = [
   { id: 1, title: "Basic Info", description: "Name and domain setup" },
@@ -74,9 +78,12 @@ const colorPresets = [
 ];
 
 export default function CreateSite() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isDerivLinked, setIsDerivLinked] = useState(false);
+  const [isDeploying, setIsDeploying] = useState(false);
 
   // Form state
   const [siteName, setSiteName] = useState("");
@@ -84,8 +91,15 @@ export default function CreateSite() {
   const [customDomain, setCustomDomain] = useState("");
   const [description, setDescription] = useState("");
   const [language, setLanguage] = useState("en");
+  const [region, setRegion] = useState("global");
   const [selectedApps, setSelectedApps] = useState<string[]>(["dtrader"]);
   const [selectedColor, setSelectedColor] = useState(colorPresets[0]);
+  const [darkMode, setDarkMode] = useState(true);
+  const [footerText, setFooterText] = useState("");
+
+  // Deriv account info
+  const [derivAccountId, setDerivAccountId] = useState("");
+  const [derivTokenHash, setDerivTokenHash] = useState("");
 
   const generateSubdomain = (name: string) => {
     return name.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 20);
@@ -106,13 +120,78 @@ export default function CreateSite() {
     );
   };
 
+  const handleDerivSuccess = (accountInfo: { loginid: string; tokenHash: string }) => {
+    setDerivAccountId(accountInfo.loginid);
+    setDerivTokenHash(accountInfo.tokenHash);
+    setIsDerivLinked(true);
+    toast.success("Deriv account linked successfully!");
+  };
+
+  const handleDeploy = async () => {
+    if (!user) {
+      toast.error("You must be logged in to create a site");
+      return;
+    }
+
+    if (!siteName || !subdomain || !derivAccountId) {
+      toast.error("Please complete all required fields");
+      return;
+    }
+
+    setIsDeploying(true);
+
+    try {
+      // Check if subdomain is already taken
+      const { data: existingSite } = await supabase
+        .from("sites")
+        .select("id")
+        .eq("subdomain", subdomain)
+        .single();
+
+      if (existingSite) {
+        toast.error("This subdomain is already taken. Please choose another.");
+        setIsDeploying(false);
+        return;
+      }
+
+      // Create the site
+      const { data, error } = await supabase.from("sites").insert({
+        user_id: user.id,
+        name: siteName,
+        subdomain: subdomain,
+        custom_domain: customDomain || null,
+        description: description || null,
+        language: language,
+        region: region,
+        deriv_account_id: derivAccountId,
+        deriv_token_hash: derivTokenHash,
+        primary_color: selectedColor.primary,
+        secondary_color: selectedColor.secondary,
+        dark_mode: darkMode,
+        footer_text: footerText || null,
+        apps: selectedApps,
+        status: "live",
+      }).select().single();
+
+      if (error) throw error;
+
+      toast.success("Site deployed successfully!");
+      navigate("/sites");
+    } catch (error) {
+      console.error("Deploy error:", error);
+      toast.error("Failed to deploy site. Please try again.");
+    } finally {
+      setIsDeploying(false);
+    }
+  };
+
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
         return (
           <div className="space-y-6">
             <div>
-              <Label htmlFor="site-name">Website Name</Label>
+              <Label htmlFor="site-name">Website Name *</Label>
               <Input
                 id="site-name"
                 placeholder="My Trading Platform"
@@ -123,13 +202,13 @@ export default function CreateSite() {
             </div>
 
             <div>
-              <Label htmlFor="subdomain">Subdomain</Label>
+              <Label htmlFor="subdomain">Subdomain *</Label>
               <div className="mt-2 flex">
                 <Input
                   id="subdomain"
                   placeholder="mysite"
                   value={subdomain}
-                  onChange={(e) => setSubdomain(e.target.value)}
+                  onChange={(e) => setSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ""))}
                   className="rounded-r-none"
                 />
                 <span className="flex items-center rounded-r-lg border border-l-0 border-border bg-secondary px-4 text-sm text-muted-foreground">
@@ -183,7 +262,7 @@ export default function CreateSite() {
 
               <div>
                 <Label>Target Region</Label>
-                <Select defaultValue="global">
+                <Select value={region} onValueChange={setRegion}>
                   <SelectTrigger className="mt-2">
                     <SelectValue />
                   </SelectTrigger>
@@ -250,6 +329,9 @@ export default function CreateSite() {
                 <Check className="mx-auto mb-3 h-12 w-12 text-success" />
                 <p className="font-medium text-success">Account Verified</p>
                 <p className="mt-1 text-sm text-success/70">
+                  Login ID: {derivAccountId}
+                </p>
+                <p className="mt-1 text-xs text-success/60">
                   Scopes: read, trading_information
                 </p>
               </div>
@@ -329,7 +411,7 @@ export default function CreateSite() {
                   Start with dark theme enabled
                 </p>
               </div>
-              <Switch defaultChecked />
+              <Switch checked={darkMode} onCheckedChange={setDarkMode} />
             </div>
 
             {/* Footer Text */}
@@ -338,6 +420,8 @@ export default function CreateSite() {
               <Input
                 id="footer"
                 placeholder="© 2025 Your Company Name"
+                value={footerText}
+                onChange={(e) => setFooterText(e.target.value)}
                 className="mt-2"
               />
             </div>
@@ -414,6 +498,10 @@ export default function CreateSite() {
                 <span className="font-mono text-sm">{subdomain}.mafomz.io</span>
               </div>
               <div className="flex justify-between">
+                <span className="text-muted-foreground">Deriv Account</span>
+                <span className="font-mono text-sm">{derivAccountId}</span>
+              </div>
+              <div className="flex justify-between">
                 <span className="text-muted-foreground">Apps</span>
                 <span className="font-medium">{selectedApps.length} selected</span>
               </div>
@@ -423,9 +511,24 @@ export default function CreateSite() {
               </div>
             </div>
 
-            <Button variant="gradient" size="xl" className="mt-6">
-              <Rocket className="mr-2 h-5 w-5" />
-              Deploy Site
+            <Button 
+              variant="gradient" 
+              size="xl" 
+              className="mt-6"
+              onClick={handleDeploy}
+              disabled={isDeploying}
+            >
+              {isDeploying ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Deploying...
+                </>
+              ) : (
+                <>
+                  <Rocket className="mr-2 h-5 w-5" />
+                  Deploy Site
+                </>
+              )}
             </Button>
           </div>
         );
@@ -437,6 +540,17 @@ export default function CreateSite() {
 
   const stepIcons = [Globe, Shield, Palette, Puzzle, Rocket];
   const StepIcon = stepIcons[currentStep - 1];
+
+  const canProceed = () => {
+    switch (currentStep) {
+      case 1:
+        return siteName.length > 0 && subdomain.length > 0;
+      case 2:
+        return isDerivLinked;
+      default:
+        return true;
+    }
+  };
 
   return (
     <DashboardLayout>
@@ -499,9 +613,13 @@ export default function CreateSite() {
                 <Button
                   variant="gradient"
                   onClick={() => setCurrentStep((prev) => Math.min(5, prev + 1))}
-                  disabled={currentStep === 2 && !isDerivLinked}
+                  disabled={!canProceed()}
                 >
-                  {currentStep === 2 && !isDerivLinked ? "Link Deriv First" : "Continue"}
+                  {!canProceed() ? (
+                    currentStep === 1 ? "Fill Required Fields" : "Link Deriv First"
+                  ) : (
+                    "Continue"
+                  )}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
@@ -514,7 +632,7 @@ export default function CreateSite() {
       <DerivAuthModal
         open={showAuthModal}
         onOpenChange={setShowAuthModal}
-        onSuccess={() => setIsDerivLinked(true)}
+        onSuccess={handleDerivSuccess}
       />
     </DashboardLayout>
   );

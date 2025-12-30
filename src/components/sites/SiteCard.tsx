@@ -1,9 +1,11 @@
-import { Globe, ExternalLink, Settings, MoreVertical, Zap } from "lucide-react";
+import { Globe, ExternalLink, Settings, MoreVertical, Zap, Trash2 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
@@ -18,6 +20,7 @@ interface SiteCardProps {
     lastUpdated: string;
     visits?: number;
   };
+  onDelete?: (id: string) => void;
 }
 
 const statusConfig = {
@@ -43,8 +46,9 @@ const statusConfig = {
   },
 };
 
-export function SiteCard({ site }: SiteCardProps) {
+export function SiteCard({ site, onDelete }: SiteCardProps) {
   const status = statusConfig[site.status];
+  const siteUrl = `https://${site.subdomain}.mafomz.io`;
 
   return (
     <div className="group glass glass-hover rounded-xl p-6 transition-all duration-300">
@@ -73,14 +77,35 @@ export function SiteCard({ site }: SiteCardProps) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="glass">
-            <DropdownMenuItem>
-              <Settings className="mr-2 h-4 w-4" />
-              Settings
+            <DropdownMenuItem asChild>
+              <Link to={`/sites/${site.id}/settings`} className="flex items-center">
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem>
-              <ExternalLink className="mr-2 h-4 w-4" />
-              Visit Site
+            <DropdownMenuItem asChild>
+              <a 
+                href={siteUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center"
+              >
+                <ExternalLink className="mr-2 h-4 w-4" />
+                Visit Site
+              </a>
             </DropdownMenuItem>
+            {onDelete && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => onDelete(site.id)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Site
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -96,7 +121,7 @@ export function SiteCard({ site }: SiteCardProps) {
           <span className={cn("h-1.5 w-1.5 rounded-full", status.dotClassName)} />
           {status.label}
         </span>
-        {site.visits !== undefined && (
+        {site.visits !== undefined && site.visits > 0 && (
           <span className="text-xs text-muted-foreground">
             {site.visits.toLocaleString()} visits
           </span>
@@ -108,10 +133,12 @@ export function SiteCard({ site }: SiteCardProps) {
         <span className="text-xs text-muted-foreground">
           Updated {site.lastUpdated}
         </span>
-        <Button variant="ghost" size="sm" className="gap-1.5">
-          <Zap className="h-3.5 w-3.5" />
-          Open
-        </Button>
+        <Link to={`/sites/${site.id}/settings`}>
+          <Button variant="ghost" size="sm" className="gap-1.5">
+            <Zap className="h-3.5 w-3.5" />
+            Manage
+          </Button>
+        </Link>
       </div>
     </div>
   );
