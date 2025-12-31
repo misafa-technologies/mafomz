@@ -113,8 +113,14 @@ export type Database = {
           description: string | null
           id: string
           is_active: boolean | null
+          max_daily_trades: number | null
           name: string
+          schedule_cron: string | null
+          schedule_enabled: boolean | null
           site_id: string | null
+          stake_amount: number | null
+          stop_loss_percentage: number | null
+          take_profit_percentage: number | null
           trade_type: string | null
           updated_at: string
           user_id: string
@@ -126,8 +132,14 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean | null
+          max_daily_trades?: number | null
           name: string
+          schedule_cron?: string | null
+          schedule_enabled?: boolean | null
           site_id?: string | null
+          stake_amount?: number | null
+          stop_loss_percentage?: number | null
+          take_profit_percentage?: number | null
           trade_type?: string | null
           updated_at?: string
           user_id: string
@@ -139,8 +151,14 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean | null
+          max_daily_trades?: number | null
           name?: string
+          schedule_cron?: string | null
+          schedule_enabled?: boolean | null
           site_id?: string | null
+          stake_amount?: number | null
+          stop_loss_percentage?: number | null
+          take_profit_percentage?: number | null
           trade_type?: string | null
           updated_at?: string
           user_id?: string
@@ -152,6 +170,62 @@ export type Database = {
             columns: ["site_id"]
             isOneToOne: false
             referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bot_executions: {
+        Row: {
+          bot_id: string
+          created_at: string
+          ended_at: string | null
+          error_message: string | null
+          id: string
+          loss_count: number | null
+          metadata: Json | null
+          profit_loss: number | null
+          started_at: string | null
+          status: string
+          trades_count: number | null
+          user_id: string
+          win_count: number | null
+        }
+        Insert: {
+          bot_id: string
+          created_at?: string
+          ended_at?: string | null
+          error_message?: string | null
+          id?: string
+          loss_count?: number | null
+          metadata?: Json | null
+          profit_loss?: number | null
+          started_at?: string | null
+          status?: string
+          trades_count?: number | null
+          user_id: string
+          win_count?: number | null
+        }
+        Update: {
+          bot_id?: string
+          created_at?: string
+          ended_at?: string | null
+          error_message?: string | null
+          id?: string
+          loss_count?: number | null
+          metadata?: Json | null
+          profit_loss?: number | null
+          started_at?: string | null
+          status?: string
+          trades_count?: number | null
+          user_id?: string
+          win_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bot_executions_bot_id_fkey"
+            columns: ["bot_id"]
+            isOneToOne: false
+            referencedRelation: "bot_configs"
             referencedColumns: ["id"]
           },
         ]
@@ -211,6 +285,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      payment_configs: {
+        Row: {
+          callback_url: string | null
+          config_name: string
+          consumer_key: string | null
+          consumer_secret: string | null
+          created_at: string
+          environment: string | null
+          id: string
+          is_active: boolean | null
+          passkey: string | null
+          provider: string
+          shortcode: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          callback_url?: string | null
+          config_name: string
+          consumer_key?: string | null
+          consumer_secret?: string | null
+          created_at?: string
+          environment?: string | null
+          id?: string
+          is_active?: boolean | null
+          passkey?: string | null
+          provider?: string
+          shortcode?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          callback_url?: string | null
+          config_name?: string
+          consumer_key?: string | null
+          consumer_secret?: string | null
+          created_at?: string
+          environment?: string | null
+          id?: string
+          is_active?: boolean | null
+          passkey?: string | null
+          provider?: string
+          shortcode?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       platform_settings: {
         Row: {
