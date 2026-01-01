@@ -12,6 +12,8 @@ import CreateSite from "./pages/CreateSite";
 import SiteSettings from "./pages/SiteSettings";
 import AdminSettings from "./pages/AdminSettings";
 import AdminPanel from "./pages/AdminPanel";
+import ModeratorPanel from "./pages/ModeratorPanel";
+import UserDashboard from "./pages/UserDashboard";
 import Commissions from "./pages/Commissions";
 import Announcements from "./pages/Announcements";
 import Bots from "./pages/Bots";
@@ -31,11 +33,13 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/dashboard" element={<ProtectedRoute><UserDashboard /></ProtectedRoute>} />
             <Route path="/sites" element={<ProtectedRoute><Sites /></ProtectedRoute>} />
             <Route path="/sites/create" element={<ProtectedRoute><CreateSite /></ProtectedRoute>} />
             <Route path="/sites/:siteId/settings" element={<ProtectedRoute><SiteSettings /></ProtectedRoute>} />
             <Route path="/admin/settings" element={<ProtectedRoute requireAdmin><AdminSettings /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminPanel /></ProtectedRoute>} />
+            <Route path="/moderator" element={<ProtectedRoute><ModeratorPanel /></ProtectedRoute>} />
             <Route path="/domains" element={<ProtectedRoute><Sites /></ProtectedRoute>} />
             <Route path="/updates" element={<ProtectedRoute><Sites /></ProtectedRoute>} />
             <Route path="/deployments" element={<ProtectedRoute><Sites /></ProtectedRoute>} />
