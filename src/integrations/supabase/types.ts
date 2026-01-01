@@ -536,6 +536,99 @@ export type Database = {
           },
         ]
       }
+      transactions: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          checkout_request_id: string | null
+          created_at: string
+          currency: string
+          id: string
+          merchant_request_id: string | null
+          metadata: Json | null
+          moderator_id: string | null
+          mpesa_receipt: string | null
+          notes: string | null
+          payment_method: string | null
+          phone_number: string | null
+          status: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          approved_at?: string | null
+          checkout_request_id?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          merchant_request_id?: string | null
+          metadata?: Json | null
+          moderator_id?: string | null
+          mpesa_receipt?: string | null
+          notes?: string | null
+          payment_method?: string | null
+          phone_number?: string | null
+          status?: string
+          type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          checkout_request_id?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          merchant_request_id?: string | null
+          metadata?: Json | null
+          moderator_id?: string | null
+          mpesa_receipt?: string | null
+          notes?: string | null
+          payment_method?: string | null
+          phone_number?: string | null
+          status?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_balances: {
+        Row: {
+          balance: number
+          currency: string
+          id: string
+          total_commissions: number | null
+          total_deposits: number | null
+          total_withdrawals: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          currency?: string
+          id?: string
+          total_commissions?: number | null
+          total_deposits?: number | null
+          total_withdrawals?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          currency?: string
+          id?: string
+          total_commissions?: number | null
+          total_deposits?: number | null
+          total_withdrawals?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
