@@ -5,7 +5,6 @@ import { useAuth } from "@/hooks/useAuth";
 import {
   LayoutGrid,
   Globe,
-  Rocket,
   DollarSign,
   Bell,
   Code2,
@@ -13,10 +12,10 @@ import {
   Sparkles,
   HelpCircle,
   Settings,
-  Palette,
   LogOut,
   Shield,
   Zap,
+  Users,
 } from "lucide-react";
 
 interface NavItem {
@@ -25,13 +24,13 @@ interface NavItem {
   href: string;
   badge?: string;
   adminOnly?: boolean;
+  moderatorOnly?: boolean;
 }
 
 const tradingPlatformItems: NavItem[] = [
+  { label: "Dashboard", icon: LayoutGrid, href: "/dashboard" },
   { label: "Sites", icon: LayoutGrid, href: "/sites" },
   { label: "Domains", icon: Globe, href: "/domains" },
-  { label: "Platform Updates", icon: Rocket, href: "/updates" },
-  { label: "Deployments", icon: Zap, href: "/deployments" },
   { label: "Commissions", icon: DollarSign, href: "/commissions" },
   { label: "Announcements", icon: Bell, href: "/announcements" },
 ];
@@ -45,6 +44,7 @@ const toolsItems: NavItem[] = [
 const bottomItems: NavItem[] = [
   { label: "Support", icon: HelpCircle, href: "/support" },
   { label: "Settings", icon: Settings, href: "/settings" },
+  { label: "Moderator Panel", icon: Users, href: "/moderator", moderatorOnly: true },
   { label: "Admin Panel", icon: Shield, href: "/admin", adminOnly: true },
 ];
 
@@ -53,13 +53,19 @@ const NavSection = ({
   items,
   currentPath,
   isAdmin = false,
+  isModerator = false,
 }: {
   title?: string;
   items: NavItem[];
   currentPath: string;
   isAdmin?: boolean;
+  isModerator?: boolean;
 }) => {
-  const filteredItems = items.filter(item => !item.adminOnly || isAdmin);
+  const filteredItems = items.filter(item => {
+    if (item.adminOnly && !isAdmin) return false;
+    if (item.moderatorOnly && !isModerator && !isAdmin) return false;
+    return true;
+  });
   
   if (filteredItems.length === 0) return null;
   
@@ -107,7 +113,7 @@ const NavSection = ({
 export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { signOut, isAdmin, user } = useAuth();
+  const { signOut, isAdmin, isModerator, user } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const handleSignOut = async () => {
@@ -142,7 +148,7 @@ export function Sidebar() {
         <div className="border-b border-sidebar-border px-4 py-3">
           <p className="text-sm font-medium text-foreground truncate">{user.email}</p>
           <p className="text-xs text-muted-foreground">
-            {isAdmin ? "Administrator" : "Member"}
+            {isAdmin ? "Administrator" : isModerator ? "Moderator" : "Member"}
           </p>
         </div>
       )}
@@ -154,12 +160,14 @@ export function Sidebar() {
           items={tradingPlatformItems}
           currentPath={location.pathname}
           isAdmin={isAdmin}
+          isModerator={isModerator}
         />
         <NavSection 
           title="Tools" 
           items={toolsItems} 
           currentPath={location.pathname}
           isAdmin={isAdmin}
+          isModerator={isModerator}
         />
       </nav>
 
@@ -169,6 +177,7 @@ export function Sidebar() {
           items={bottomItems} 
           currentPath={location.pathname}
           isAdmin={isAdmin}
+          isModerator={isModerator}
         />
         <button 
           onClick={handleSignOut}

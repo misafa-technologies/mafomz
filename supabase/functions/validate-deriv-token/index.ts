@@ -150,7 +150,10 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({
+        valid: true,
         success: true,
+        loginid: auth.loginid,
+        tokenHash: hashToken(token),
         account: {
           loginid: auth.loginid,
           email: auth.email,

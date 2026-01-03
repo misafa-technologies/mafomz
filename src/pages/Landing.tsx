@@ -1,5 +1,7 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   Zap, 
   Shield, 
@@ -12,7 +14,47 @@ import {
   ArrowRight
 } from "lucide-react";
 
+interface PlatformSettings {
+  platform_name: string;
+  platform_description: string;
+  contact_email: string;
+  contact_phone: string;
+}
+
 const Landing = () => {
+  const [settings, setSettings] = useState<PlatformSettings>({
+    platform_name: "Mafomz",
+    platform_description: "",
+    contact_email: "",
+    contact_phone: "",
+  });
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    const { data } = await supabase
+      .from("platform_settings")
+      .select("setting_key, setting_value");
+
+    if (data) {
+      const settingsMap: PlatformSettings = {
+        platform_name: "Mafomz",
+        platform_description: "",
+        contact_email: "",
+        contact_phone: "",
+      };
+      data.forEach((item) => {
+        if (item.setting_key in settingsMap) {
+          settingsMap[item.setting_key as keyof PlatformSettings] = item.setting_value || "";
+        }
+      });
+      setSettings(settingsMap);
+    }
+  };
+
+  const platformName = settings.platform_name || "Mafomz";
   const features = [
     {
       icon: Globe,
@@ -61,7 +103,7 @@ const Landing = () => {
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
             <Zap className="w-5 h-5 text-primary-foreground" />
           </div>
-          <span className="text-xl font-bold text-foreground">DerivForge</span>
+          <span className="text-xl font-bold text-foreground">{platformName}</span>
         </div>
         
         <div className="flex items-center gap-4">
@@ -92,8 +134,7 @@ const Landing = () => {
           </h1>
           
           <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
-            Create, customize, and deploy Deriv-integrated trading websites in minutes. 
-            No coding required. Full automation. Maximum profit.
+            {settings.platform_description || "Create, customize, and deploy Deriv-integrated trading websites in minutes. No coding required. Full automation. Maximum profit."}
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -167,7 +208,7 @@ const Landing = () => {
               Ready to Launch Your Trading Platform?
             </h2>
             <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
-              Join thousands of traders who have built successful Deriv-integrated websites with Mafomz.
+              Join thousands of traders who have built successful Deriv-integrated websites with {platformName}.
             </p>
             <Link to="/auth?mode=signup">
               <Button size="xl" variant="gradient" className="gap-2">
@@ -185,12 +226,14 @@ const Landing = () => {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center">
               <Zap className="w-4 h-4 text-primary-foreground" />
             </div>
-            <span className="text-sm text-muted-foreground">© 2025 DerivForge. All rights reserved.</span>
+            <span className="text-sm text-muted-foreground">© 2025 {platformName}. All rights reserved.</span>
           </div>
           <div className="flex items-center gap-6 text-sm text-muted-foreground">
             <a href="#" className="hover:text-foreground transition-colors">Privacy</a>
             <a href="#" className="hover:text-foreground transition-colors">Terms</a>
-            <a href="#" className="hover:text-foreground transition-colors">Contact</a>
+            {settings.contact_email && (
+              <a href={`mailto:${settings.contact_email}`} className="hover:text-foreground transition-colors">Contact</a>
+            )}
           </div>
         </div>
       </footer>
