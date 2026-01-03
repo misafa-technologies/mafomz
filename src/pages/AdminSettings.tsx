@@ -14,6 +14,8 @@ interface PlatformSettings {
   platform_name: string;
   platform_description: string;
   favicon_url: string;
+  contact_email: string;
+  contact_phone: string;
 }
 
 const AdminSettings = () => {
@@ -25,6 +27,8 @@ const AdminSettings = () => {
     platform_name: "",
     platform_description: "",
     favicon_url: "",
+    contact_email: "",
+    contact_phone: "",
   });
 
   useEffect(() => {
@@ -43,6 +47,8 @@ const AdminSettings = () => {
         platform_name: "",
         platform_description: "",
         favicon_url: "",
+        contact_email: "",
+        contact_phone: "",
       };
 
       data?.forEach((item) => {
@@ -194,6 +200,26 @@ const AdminSettings = () => {
               )}
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="contact_email">Contact Email</Label>
+              <Input
+                id="contact_email"
+                type="email"
+                value={settings.contact_email}
+                onChange={(e) => setSettings({ ...settings, contact_email: e.target.value })}
+                placeholder="support@yourplatform.com"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="contact_phone">Contact Phone</Label>
+              <Input
+                id="contact_phone"
+                value={settings.contact_phone}
+                onChange={(e) => setSettings({ ...settings, contact_phone: e.target.value })}
+                placeholder="+254 700 000 000"
+              />
+            </div>
             <Button 
               onClick={handleSave} 
               disabled={isSaving}

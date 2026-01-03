@@ -31,17 +31,102 @@ serve(async (req) => {
           return acc;
         }, {}) || {};
 
+        const mpesaReceiptNumber = metadata.MpesaReceiptNumber as string;
+        const amount = metadata.Amount as number;
+        const phoneNumber = String(metadata.PhoneNumber);
+
         console.log("Payment successful:", {
           checkoutRequestId: CheckoutRequestID,
-          amount: metadata.Amount,
-          mpesaReceiptNumber: metadata.MpesaReceiptNumber,
-          phoneNumber: metadata.PhoneNumber,
+          amount,
+          mpesaReceiptNumber,
+          phoneNumber,
         });
 
-        // Store successful transaction in commissions or a dedicated transactions table
-        // This can be customized based on your needs
+        // Find the pending transaction
+        const { data: transaction, error: txFindError } = await supabase
+          .from("transactions")
+          .select("*")
+          .eq("checkout_request_id", CheckoutRequestID)
+          .single();
+
+        if (txFindError || !transaction) {
+          console.error("Transaction not found:", txFindError);
+          // Try to find by phone number as fallback
+          const { data: txByPhone } = await supabase
+            .from("transactions")
+            .select("*")
+            .eq("phone_number", phoneNumber)
+            .eq("status", "pending")
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .single();
+
+          if (!txByPhone) {
+            console.error("No matching transaction found for callback");
+            return new Response(
+              JSON.stringify({ success: true, message: "No matching transaction" }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+        }
+
+        const tx = transaction;
+
+        // Update transaction to completed
+        const { error: updateError } = await supabase
+          .from("transactions")
+          .update({
+            status: "completed",
+            mpesa_receipt: mpesaReceiptNumber,
+            approved_at: new Date().toISOString(),
+            notes: `Auto-approved via M-Pesa callback. Receipt: ${mpesaReceiptNumber}`,
+          })
+          .eq("id", tx.id);
+
+        if (updateError) {
+          console.error("Error updating transaction:", updateError);
+        } else {
+          console.log("Transaction updated to completed:", tx.id);
+
+          // Update user balance
+          const { data: balanceData } = await supabase
+            .from("user_balances")
+            .select("*")
+            .eq("user_id", tx.user_id)
+            .single();
+
+          if (balanceData) {
+            await supabase
+              .from("user_balances")
+              .update({
+                balance: balanceData.balance + tx.amount,
+                total_deposits: (balanceData.total_deposits || 0) + tx.amount,
+              })
+              .eq("user_id", tx.user_id);
+            console.log("Balance updated for user:", tx.user_id);
+          } else {
+            await supabase
+              .from("user_balances")
+              .insert({
+                user_id: tx.user_id,
+                balance: tx.amount,
+                total_deposits: tx.amount,
+                currency: "KES",
+              });
+            console.log("New balance record created for user:", tx.user_id);
+          }
+        }
       } else {
         console.log("Payment failed:", { ResultCode, ResultDesc, CheckoutRequestID });
+        
+        // Update transaction to failed
+        await supabase
+          .from("transactions")
+          .update({
+            status: "failed",
+            notes: `Payment failed: ${ResultDesc}`,
+          })
+          .eq("checkout_request_id", CheckoutRequestID);
       }
     }
 

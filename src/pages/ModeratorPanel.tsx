@@ -558,13 +558,13 @@ export default function ModeratorPanel() {
           <TabsContent value="documentation">
             <Card>
               <CardHeader>
-                <CardTitle>Moderator Guidelines</CardTitle>
-                <CardDescription>Best practices and procedures</CardDescription>
+                <CardTitle>Moderator Guidelines & Platform Documentation</CardTitle>
+                <CardDescription>Best practices, procedures, and how the platform works</CardDescription>
               </CardHeader>
               <CardContent className="prose prose-invert max-w-none">
                 <div className="space-y-6">
                   <section>
-                    <h3 className="text-lg font-semibold mb-2">Transaction Approval Process</h3>
+                    <h3 className="text-lg font-semibold mb-2">📋 Transaction Approval Process</h3>
                     <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
                       <li>Verify the M-Pesa receipt number is valid and matches the amount</li>
                       <li>Check that the phone number corresponds to the user's registered details</li>
@@ -575,7 +575,7 @@ export default function ModeratorPanel() {
                   </section>
 
                   <section>
-                    <h3 className="text-lg font-semibold mb-2">M-Pesa Receipt Verification</h3>
+                    <h3 className="text-lg font-semibold mb-2">📱 M-Pesa Receipt Verification</h3>
                     <ul className="list-disc list-inside space-y-2 text-muted-foreground">
                       <li>Valid receipts start with a letter followed by numbers (e.g., RAJ1234567)</li>
                       <li>Receipt should be from within the last 24 hours</li>
@@ -585,7 +585,7 @@ export default function ModeratorPanel() {
                   </section>
 
                   <section>
-                    <h3 className="text-lg font-semibold mb-2">Support Ticket Guidelines</h3>
+                    <h3 className="text-lg font-semibold mb-2">💬 Support Ticket Guidelines</h3>
                     <ul className="list-disc list-inside space-y-2 text-muted-foreground">
                       <li>Respond to all tickets within 24 hours</li>
                       <li>Be professional and courteous in all communications</li>
@@ -595,6 +595,41 @@ export default function ModeratorPanel() {
                     </ul>
                   </section>
 
+                  <section className="bg-primary/10 border border-primary/30 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold mb-2 text-primary">💰 How Deriv Commissions Work</h3>
+                    <div className="space-y-3 text-muted-foreground">
+                      <p>The platform owner (admin) receives affiliate commissions from Deriv based on the following structure:</p>
+                      <ol className="list-decimal list-inside space-y-2">
+                        <li><strong>Site Creation:</strong> When users create a site, they link their Deriv account using an API token</li>
+                        <li><strong>Affiliate Binding:</strong> The platform's Deriv App ID (118936) is embedded in all user sites</li>
+                        <li><strong>Commission Flow:</strong> When visitors to user sites sign up and trade on Deriv, commissions flow to the platform owner's Deriv account</li>
+                        <li><strong>Revenue Split:</strong> Platform owner can set commission sharing percentages with site owners</li>
+                      </ol>
+                      <p className="mt-3 text-sm">
+                        <strong>Important:</strong> Deriv pays commissions based on trading volume from referred users. 
+                        These are automatically tracked via the affiliate system and paid directly to the admin's Deriv account.
+                      </p>
+                    </div>
+                  </section>
+
+                  <section className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold mb-2 text-blue-400">🔄 Automatic Payment Processing</h3>
+                    <div className="space-y-3 text-muted-foreground">
+                      <p>M-Pesa deposits work as follows:</p>
+                      <ol className="list-decimal list-inside space-y-2">
+                        <li><strong>User initiates deposit:</strong> User enters phone number and amount</li>
+                        <li><strong>STK Push sent:</strong> An M-Pesa prompt is sent to their phone</li>
+                        <li><strong>User confirms:</strong> User enters PIN to complete payment</li>
+                        <li><strong>Automatic callback:</strong> M-Pesa sends confirmation to our system</li>
+                        <li><strong>Balance updated:</strong> User's balance is automatically credited</li>
+                      </ol>
+                      <p className="mt-3 text-sm">
+                        <strong>Note:</strong> If the automatic callback fails, transactions appear here for manual approval.
+                        Always verify the M-Pesa receipt before approving.
+                      </p>
+                    </div>
+                  </section>
+
                   <section className="bg-destructive/10 border border-destructive/30 rounded-lg p-4">
                     <h3 className="text-lg font-semibold mb-2 text-destructive">⚠️ Important Security Rules</h3>
                     <ul className="list-disc list-inside space-y-2 text-muted-foreground">
@@ -602,6 +637,7 @@ export default function ModeratorPanel() {
                       <li><strong>NEVER</strong> share your moderator credentials with anyone</li>
                       <li><strong>NEVER</strong> approve transactions without valid receipt verification</li>
                       <li><strong>ALWAYS</strong> report suspicious activity to admin immediately</li>
+                      <li><strong>ALL</strong> payments to users are handled through the platform's withdrawal system</li>
                     </ul>
                   </section>
                 </div>
