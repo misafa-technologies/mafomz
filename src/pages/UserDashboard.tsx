@@ -452,7 +452,7 @@ export default function UserDashboard() {
                         <div>
                           <h4 className="font-medium">{site.name}</h4>
                           <p className="text-sm text-muted-foreground">
-                            {site.subdomain}.mafomz.com
+                            {site.subdomain}.mafomz.io
                           </p>
                         </div>
                         <div className="flex items-center gap-2">

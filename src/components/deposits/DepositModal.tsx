@@ -84,29 +84,7 @@ export function DepositModal({ open, onOpenChange, onSuccess }: DepositModalProp
 
       if (txError) throw txError;
 
-      // Get M-Pesa config
-      const { data: configs, error: configError } = await supabase
-        .from("payment_configs")
-        .select("*")
-        .eq("provider", "mpesa")
-        .eq("is_active", true)
-        .limit(1);
-
-      if (configError) throw configError;
-
-      if (!configs || configs.length === 0) {
-        // No M-Pesa config - set to pending for manual processing
-        await supabase
-          .from("transactions")
-          .update({ status: "pending" })
-          .eq("id", transaction.id);
-
-        setStep("pending");
-        toast.info("Deposit request submitted. Please wait for approval.");
-        return;
-      }
-
-      // Initiate STK Push
+      // Initiate STK Push using global config
       const { data: stkResult, error: stkError } = await supabase.functions.invoke(
         "mpesa-stk-push",
         {
@@ -115,12 +93,27 @@ export function DepositModal({ open, onOpenChange, onSuccess }: DepositModalProp
             amount: numAmount,
             accountReference: `DEP-${transaction.id.slice(0, 8).toUpperCase()}`,
             description: "Account Deposit",
-            configId: configs[0].id,
+            userId: user.id,
+            transactionId: transaction.id,
           },
         }
       );
 
-      if (stkError) throw stkError;
+      if (stkError) {
+        console.error("STK Error:", stkError);
+        // STK Push failed - set to pending for manual processing
+        await supabase
+          .from("transactions")
+          .update({ 
+            status: "pending",
+            notes: "STK Push service unavailable - pending manual approval"
+          })
+          .eq("id", transaction.id);
+
+        setStep("pending");
+        toast.info("Deposit submitted. Please wait for moderator approval.");
+        return;
+      }
 
       if (stkResult?.success) {
         // Update transaction with checkout request ID
@@ -136,7 +129,7 @@ export function DepositModal({ open, onOpenChange, onSuccess }: DepositModalProp
         setStep("pending");
         toast.success("STK Push sent! Check your phone to complete payment.");
       } else {
-        // STK Push failed - set to pending for manual processing
+        // STK Push returned error - set to pending for manual processing
         await supabase
           .from("transactions")
           .update({ 
@@ -146,7 +139,7 @@ export function DepositModal({ open, onOpenChange, onSuccess }: DepositModalProp
           .eq("id", transaction.id);
 
         setStep("pending");
-        toast.info("Please complete your M-Pesa payment manually and wait for approval.");
+        toast.info(stkResult?.error || "Please complete your M-Pesa payment manually.");
       }
     } catch (error) {
       console.error("Deposit error:", error);
