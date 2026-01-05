@@ -11,7 +11,13 @@ interface STKPushRequest {
   amount: number;
   accountReference: string;
   description: string;
-  configId: string;
+  userId: string;
+  transactionId?: string;
+}
+
+interface PlatformSetting {
+  setting_key: string;
+  setting_value: string | null;
 }
 
 serve(async (req) => {
@@ -25,38 +31,65 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { phone, amount, accountReference, description, configId }: STKPushRequest = await req.json();
+    const { phone, amount, accountReference, description, userId, transactionId }: STKPushRequest = await req.json();
 
-    console.log("STK Push request:", { phone, amount, accountReference, configId });
+    console.log("STK Push request:", { phone, amount, accountReference, userId });
 
-    // Fetch M-Pesa config
-    const { data: config, error: configError } = await supabase
-      .from("payment_configs")
-      .select("*")
-      .eq("id", configId)
-      .single();
+    // Fetch global M-Pesa config from platform_settings
+    const { data: settings, error: settingsError } = await supabase
+      .from("platform_settings")
+      .select("setting_key, setting_value")
+      .in("setting_key", [
+        "mpesa_enabled",
+        "mpesa_default_environment",
+        "mpesa_shortcode",
+        "mpesa_passkey",
+        "mpesa_consumer_key",
+        "mpesa_consumer_secret",
+        "mpesa_callback_url"
+      ]);
 
-    if (configError || !config) {
-      console.error("Config error:", configError);
+    if (settingsError) {
+      console.error("Settings error:", settingsError);
       return new Response(
-        JSON.stringify({ success: false, error: "Payment configuration not found" }),
+        JSON.stringify({ success: false, error: "Failed to fetch payment configuration" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Convert settings array to object
+    const config: Record<string, string> = {};
+    (settings as PlatformSetting[])?.forEach((s) => {
+      if (s.setting_value) {
+        config[s.setting_key] = s.setting_value;
+      }
+    });
+
+    // Check if M-Pesa is enabled
+    if (config.mpesa_enabled !== "true") {
+      return new Response(
+        JSON.stringify({ success: false, error: "M-Pesa payments are not enabled" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    if (!config.is_active) {
+    // Validate required credentials
+    if (!config.mpesa_shortcode || !config.mpesa_passkey || !config.mpesa_consumer_key || !config.mpesa_consumer_secret) {
+      console.error("Missing M-Pesa credentials");
       return new Response(
-        JSON.stringify({ success: false, error: "Payment configuration is not active" }),
+        JSON.stringify({ success: false, error: "M-Pesa is not properly configured. Please contact support." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     // Get M-Pesa access token
-    const baseUrl = config.environment === "production"
+    const baseUrl = config.mpesa_default_environment === "production"
       ? "https://api.safaricom.co.ke"
       : "https://sandbox.safaricom.co.ke";
 
-    const authString = btoa(`${config.consumer_key}:${config.consumer_secret}`);
+    const authString = btoa(`${config.mpesa_consumer_key}:${config.mpesa_consumer_secret}`);
+    
+    console.log("Fetching M-Pesa access token from:", baseUrl);
     
     const tokenResponse = await fetch(`${baseUrl}/oauth/v1/generate?grant_type=client_credentials`, {
       method: "GET",
@@ -66,18 +99,19 @@ serve(async (req) => {
     });
 
     const tokenData = await tokenResponse.json();
-    console.log("Token response:", tokenData);
+    console.log("Token response status:", tokenResponse.status);
 
     if (!tokenData.access_token) {
+      console.error("Token error:", tokenData);
       return new Response(
-        JSON.stringify({ success: false, error: "Failed to get M-Pesa access token" }),
+        JSON.stringify({ success: false, error: "Failed to authenticate with M-Pesa" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     // Generate timestamp and password
     const timestamp = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 14);
-    const password = btoa(`${config.shortcode}${config.passkey}${timestamp}`);
+    const password = btoa(`${config.mpesa_shortcode}${config.mpesa_passkey}${timestamp}`);
 
     // Format phone number (remove leading 0 or +254)
     let formattedPhone = phone.replace(/\s/g, "");
@@ -87,6 +121,11 @@ serve(async (req) => {
       formattedPhone = "254" + formattedPhone.slice(1);
     }
 
+    // Use custom callback URL or default
+    const callbackUrl = config.mpesa_callback_url || `${supabaseUrl}/functions/v1/mpesa-callback`;
+
+    console.log("Initiating STK Push to:", formattedPhone);
+
     // Initiate STK Push
     const stkResponse = await fetch(`${baseUrl}/mpesa/stkpush/v1/processrequest`, {
       method: "POST",
@@ -95,15 +134,15 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        BusinessShortCode: config.shortcode,
+        BusinessShortCode: config.mpesa_shortcode,
         Password: password,
         Timestamp: timestamp,
         TransactionType: "CustomerPayBillOnline",
         Amount: Math.round(amount),
         PartyA: formattedPhone,
-        PartyB: config.shortcode,
+        PartyB: config.mpesa_shortcode,
         PhoneNumber: formattedPhone,
-        CallBackURL: config.callback_url || `${supabaseUrl}/functions/v1/mpesa-callback`,
+        CallBackURL: callbackUrl,
         AccountReference: accountReference,
         TransactionDesc: description,
       }),
@@ -113,6 +152,17 @@ serve(async (req) => {
     console.log("STK Push response:", stkData);
 
     if (stkData.ResponseCode === "0") {
+      // Update transaction with M-Pesa IDs if transactionId was provided
+      if (transactionId) {
+        await supabase
+          .from("transactions")
+          .update({
+            checkout_request_id: stkData.CheckoutRequestID,
+            merchant_request_id: stkData.MerchantRequestID,
+          })
+          .eq("id", transactionId);
+      }
+
       return new Response(
         JSON.stringify({
           success: true,
@@ -123,10 +173,11 @@ serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     } else {
+      console.error("STK Push failed:", stkData);
       return new Response(
         JSON.stringify({
           success: false,
-          error: stkData.errorMessage || stkData.ResponseDescription || "STK Push failed",
+          error: stkData.errorMessage || stkData.ResponseDescription || "STK Push failed. Please try again.",
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -134,7 +185,7 @@ serve(async (req) => {
   } catch (error) {
     console.error("STK Push error:", error);
     return new Response(
-      JSON.stringify({ success: false, error: "Internal server error" }),
+      JSON.stringify({ success: false, error: "Internal server error. Please try again." }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
