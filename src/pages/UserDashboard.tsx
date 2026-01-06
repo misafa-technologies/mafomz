@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { usePlatformDomain } from "@/hooks/usePlatformDomain";
 import { toast } from "sonner";
 import { DepositModal } from "@/components/deposits/DepositModal";
 import {
@@ -66,12 +67,16 @@ interface Site {
 
 export default function UserDashboard() {
   const { user } = useAuth();
+  const { domain } = usePlatformDomain();
   const [balance, setBalance] = useState<UserBalance | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [depositModalOpen, setDepositModalOpen] = useState(false);
+
+  // Display domain with fallback
+  const displayDomain = domain || window.location.hostname;
 
   useEffect(() => {
     if (user) {
@@ -452,7 +457,7 @@ export default function UserDashboard() {
                         <div>
                           <h4 className="font-medium">{site.name}</h4>
                           <p className="text-sm text-muted-foreground">
-                            {site.subdomain}.mafomz.io
+                            {site.subdomain}.{displayDomain}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,9 +20,20 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Users, Shield, UserPlus, Loader2, Trash2 } from "lucide-react";
+import { Users, Shield, UserPlus, Loader2, Trash2, AlertTriangle, Lock } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
@@ -38,10 +50,11 @@ interface UserRole {
 }
 
 export function RoleManagement() {
+  const { isAdmin } = useAuth();
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [email, setEmail] = useState("");
-  const [selectedRole, setSelectedRole] = useState<AppRole>("user");
+  const [selectedRole, setSelectedRole] = useState<AppRole>("moderator");
   const [isAdding, setIsAdding] = useState(false);
 
   useEffect(() => {
@@ -81,6 +94,11 @@ export function RoleManagement() {
   };
 
   const handleAddRole = async () => {
+    if (!isAdmin) {
+      toast.error("Only administrators can assign roles");
+      return;
+    }
+
     if (!email) {
       toast.error("Please enter an email address");
       return;
@@ -130,6 +148,11 @@ export function RoleManagement() {
   };
 
   const handleRemoveRole = async (roleId: string) => {
+    if (!isAdmin) {
+      toast.error("Only administrators can remove roles");
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from("user_roles")
@@ -165,6 +188,23 @@ export function RoleManagement() {
     );
   }
 
+  // Show access denied if not admin
+  if (!isAdmin) {
+    return (
+      <Card className="glass border-border">
+        <CardContent className="pt-6">
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <Lock className="w-12 h-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold">Admin Access Required</h3>
+            <p className="text-muted-foreground mt-2">
+              Only administrators can manage user roles.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="glass border-border">
       <CardHeader>
@@ -173,10 +213,23 @@ export function RoleManagement() {
           Role Management
         </CardTitle>
         <CardDescription>
-          Assign admin and moderator roles to users
+          Assign admin and moderator roles to users. Only admins can modify roles.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Security Notice */}
+        <div className="rounded-lg border border-warning/30 bg-warning/10 p-4">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 text-warning flex-shrink-0" />
+            <div>
+              <p className="font-medium text-warning">Security Notice</p>
+              <p className="text-sm text-warning/80">
+                Only grant admin access to trusted individuals. Admins have full platform control.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Add Role Form */}
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1">
@@ -197,7 +250,6 @@ export function RoleManagement() {
               <SelectContent>
                 <SelectItem value="admin">Admin</SelectItem>
                 <SelectItem value="moderator">Moderator</SelectItem>
-                <SelectItem value="user">User</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -209,6 +261,32 @@ export function RoleManagement() {
             )}
             Assign Role
           </Button>
+        </div>
+
+        {/* Role Descriptions */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="rounded-lg bg-secondary/30 p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Badge variant="destructive">Admin</Badge>
+            </div>
+            <ul className="text-sm text-muted-foreground space-y-1">
+              <li>• Full platform control</li>
+              <li>• Manage all users and roles</li>
+              <li>• Configure payments and settings</li>
+              <li>• View all data and analytics</li>
+            </ul>
+          </div>
+          <div className="rounded-lg bg-secondary/30 p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Badge variant="default">Moderator</Badge>
+            </div>
+            <ul className="text-sm text-muted-foreground space-y-1">
+              <li>• View all transactions</li>
+              <li>• Approve/reject deposits</li>
+              <li>• Handle support tickets</li>
+              <li>• View user profiles</li>
+            </ul>
+          </div>
         </div>
 
         {/* Roles Table */}
@@ -252,16 +330,35 @@ export function RoleManagement() {
                       {new Date(role.created_at).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="text-right">
-                      {role.role !== "user" && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveRole(role.id)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Remove Role</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to remove the {role.role} role from{" "}
+                              {role.profile?.email || "this user"}? They will lose all associated permissions.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleRemoveRole(role.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Remove Role
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </TableCell>
                   </TableRow>
                 ))
