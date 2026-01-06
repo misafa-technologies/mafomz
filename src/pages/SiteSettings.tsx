@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { usePlatformDomain } from "@/hooks/usePlatformDomain";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,11 +54,15 @@ const SiteSettings = () => {
   const { siteId } = useParams<{ siteId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { domain } = usePlatformDomain();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [site, setSite] = useState<Site | null>(null);
+
+  // Display domain with fallback
+  const displayDomain = domain || window.location.hostname;
 
   useEffect(() => {
     if (siteId) {
@@ -242,7 +247,7 @@ const SiteSettings = () => {
                         className="rounded-r-none"
                       />
                       <div className="flex items-center px-3 bg-muted border border-l-0 border-input rounded-r-md text-sm text-muted-foreground">
-                        .mafomz.io
+                        .{displayDomain}
                       </div>
                     </div>
                   </div>

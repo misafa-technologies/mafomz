@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -47,7 +47,10 @@ import {
   BarChart3,
   History,
   RefreshCw,
-  Eye
+  Eye,
+  Upload,
+  FileText,
+  Check
 } from "lucide-react";
 
 interface BotConfig {
@@ -244,6 +247,7 @@ const sampleBots = [
 const Bots = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [bots, setBots] = useState<BotConfig[]>([]);
   const [executions, setExecutions] = useState<BotExecution[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -252,6 +256,8 @@ const Bots = () => {
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [selectedBot, setSelectedBot] = useState<BotConfig | null>(null);
   const [activeTab, setActiveTab] = useState("my-bots");
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [newBot, setNewBot] = useState({
     name: "",
     description: "",
@@ -428,6 +434,79 @@ const Bots = () => {
     setShowDetailsDialog(true);
   };
 
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.name.endsWith('.xml')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload an XML file exported from DBot",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 1MB)
+    if (file.size > 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Maximum file size is 1MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploading(true);
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      
+      // Basic XML validation
+      if (!content.includes('<?xml') && !content.includes('<xml')) {
+        toast({
+          title: "Invalid XML",
+          description: "The file doesn't appear to be valid DBot XML",
+          variant: "destructive",
+        });
+        setIsUploading(false);
+        return;
+      }
+
+      setNewBot(prev => ({ ...prev, xml_content: content }));
+      setUploadedFileName(file.name);
+      
+      // Try to extract bot name from file name
+      const baseName = file.name.replace('.xml', '').replace(/_/g, ' ').replace(/-/g, ' ');
+      if (!newBot.name) {
+        setNewBot(prev => ({ ...prev, name: baseName }));
+      }
+
+      toast({
+        title: "File uploaded",
+        description: `${file.name} has been loaded successfully`,
+      });
+      setIsUploading(false);
+    };
+
+    reader.onerror = () => {
+      toast({
+        title: "Upload failed",
+        description: "Failed to read the file",
+        variant: "destructive",
+      });
+      setIsUploading(false);
+    };
+
+    reader.readAsText(file);
+  };
+
+  const triggerFileUpload = () => {
+    fileInputRef.current?.click();
+  };
+
   const activeBots = bots.filter(b => b.is_active);
   const totalPnL = executions.reduce((sum, e) => sum + Number(e.profit_loss), 0);
   const totalTrades = executions.reduce((sum, e) => sum + e.trades_count, 0);
@@ -540,18 +619,69 @@ const Bots = () => {
                   </TabsContent>
 
                   <TabsContent value="strategy" className="space-y-4 py-4">
+                    {/* File Upload Section */}
+                    <div className="rounded-xl border-2 border-dashed border-border p-6 text-center hover:border-primary/50 transition-colors">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".xml"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                      />
+                      <div className="space-y-4">
+                        <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                          {isUploading ? (
+                            <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                          ) : uploadedFileName ? (
+                            <Check className="w-8 h-8 text-success" />
+                          ) : (
+                            <Upload className="w-8 h-8 text-primary" />
+                          )}
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-foreground">
+                            {uploadedFileName ? uploadedFileName : "Upload DBot XML File"}
+                          </h4>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {uploadedFileName 
+                              ? "File loaded successfully. You can upload a different file or paste XML below."
+                              : "Export your strategy from Deriv DBot and upload the XML file"}
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={triggerFileUpload}
+                          disabled={isUploading}
+                          className="gap-2"
+                        >
+                          <FileText className="w-4 h-4" />
+                          {uploadedFileName ? "Upload Different File" : "Choose XML File"}
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t border-border" />
+                      </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-background px-2 text-muted-foreground">Or paste XML directly</span>
+                      </div>
+                    </div>
+
                     <div className="space-y-2">
                       <Label>XML Configuration *</Label>
                       <Textarea
                         value={newBot.xml_content}
-                        onChange={(e) => setNewBot({ ...newBot, xml_content: e.target.value })}
+                        onChange={(e) => {
+                          setNewBot({ ...newBot, xml_content: e.target.value });
+                          setUploadedFileName(null);
+                        }}
                         placeholder="Paste your DBot XML configuration here..."
-                        rows={12}
+                        rows={10}
                         className="font-mono text-sm"
                       />
-                      <p className="text-xs text-muted-foreground">
-                        Export your strategy from Deriv DBot and paste the XML here
-                      </p>
                     </div>
 
                     <div className="flex items-center justify-between rounded-lg border border-border p-4">

@@ -32,6 +32,7 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { usePlatformDomain } from "@/hooks/usePlatformDomain";
 import { toast } from "sonner";
 
 const steps = [
@@ -80,6 +81,7 @@ const colorPresets = [
 export default function CreateSite() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { domain, isLoading: isDomainLoading } = usePlatformDomain();
   const [currentStep, setCurrentStep] = useState(1);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isDerivLinked, setIsDerivLinked] = useState(false);
@@ -100,6 +102,9 @@ export default function CreateSite() {
   // Deriv account info
   const [derivAccountId, setDerivAccountId] = useState("");
   const [derivTokenHash, setDerivTokenHash] = useState("");
+
+  // Display domain (fallback to current hostname if not set)
+  const displayDomain = domain || window.location.hostname;
 
   const generateSubdomain = (name: string) => {
     return name.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 20);
@@ -212,7 +217,7 @@ export default function CreateSite() {
                   className="rounded-r-none"
                 />
                 <span className="flex items-center rounded-r-lg border border-l-0 border-border bg-secondary px-4 text-sm text-muted-foreground">
-                  .mafomz.io
+                  .{displayDomain}
                 </span>
               </div>
             </div>
@@ -282,8 +287,13 @@ export default function CreateSite() {
               <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
                 <Label className="text-xs text-primary">URL Preview</Label>
                 <p className="mt-1 font-mono text-sm text-foreground">
-                  https://{subdomain}.mafomz.io
+                  https://{subdomain}.{displayDomain}
                 </p>
+                {customDomain && (
+                  <p className="mt-1 font-mono text-xs text-muted-foreground">
+                    Custom: https://{customDomain}
+                  </p>
+                )}
               </div>
             )}
 
