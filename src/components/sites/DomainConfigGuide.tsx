@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Copy, CheckCircle2, Globe, Server, ExternalLink, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { supabase } from "@/integrations/supabase/client";
+import { usePlatformDomain } from "@/hooks/usePlatformDomain";
 import { toast } from "sonner";
 
 interface DomainConfigGuideProps {
@@ -12,23 +12,7 @@ interface DomainConfigGuideProps {
 
 export function DomainConfigGuide({ subdomain, customDomain }: DomainConfigGuideProps) {
   const [copied, setCopied] = useState<string | null>(null);
-  const [platformDomain, setPlatformDomain] = useState("mafomz.io");
-
-  useEffect(() => {
-    fetchPlatformDomain();
-  }, []);
-
-  const fetchPlatformDomain = async () => {
-    const { data } = await supabase
-      .from("platform_settings")
-      .select("setting_value")
-      .eq("setting_key", "platform_domain")
-      .single();
-    
-    if (data?.setting_value) {
-      setPlatformDomain(data.setting_value);
-    }
-  };
+  const { domain: platformDomain, fullSubdomainUrl } = usePlatformDomain();
 
   const copyToClipboard = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
@@ -37,13 +21,16 @@ export function DomainConfigGuide({ subdomain, customDomain }: DomainConfigGuide
     setTimeout(() => setCopied(null), 2000);
   };
 
-  const siteUrl = `https://${subdomain}.${platformDomain}`;
-  const serverIP = "185.158.133.1"; // Example Lovable server IP
+  const siteUrl = fullSubdomainUrl(subdomain);
+  const serverIP = "185.158.133.1";
+
+  // Use the current domain for verification
+  const verificationPrefix = platformDomain.split(".")[0] || "platform";
 
   const dnsRecords = customDomain ? [
     { type: "A", name: "@", value: serverIP, description: "Root domain" },
     { type: "A", name: "www", value: serverIP, description: "WWW subdomain" },
-    { type: "TXT", name: "_mafomz", value: `verify=${subdomain}`, description: "Verification" },
+    { type: "TXT", name: `_${verificationPrefix}`, value: `verify=${subdomain}`, description: "Verification" },
   ] : [];
 
   return (
