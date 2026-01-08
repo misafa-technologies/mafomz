@@ -67,16 +67,13 @@ interface Site {
 
 export default function UserDashboard() {
   const { user } = useAuth();
-  const { domain } = usePlatformDomain();
+  const { getSiteUrl } = usePlatformDomain();
   const [balance, setBalance] = useState<UserBalance | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [depositModalOpen, setDepositModalOpen] = useState(false);
-
-  // Display domain with fallback
-  const displayDomain = domain || window.location.hostname;
 
   useEffect(() => {
     if (user) {
@@ -456,8 +453,8 @@ export default function UserDashboard() {
                       >
                         <div>
                           <h4 className="font-medium">{site.name}</h4>
-                          <p className="text-sm text-muted-foreground">
-                            {site.subdomain}.{displayDomain}
+                          <p className="text-sm text-muted-foreground font-mono">
+                            {getSiteUrl(site.subdomain)}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">

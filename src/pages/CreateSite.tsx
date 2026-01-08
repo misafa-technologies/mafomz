@@ -81,7 +81,7 @@ const colorPresets = [
 export default function CreateSite() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { domain, isLoading: isDomainLoading } = usePlatformDomain();
+  const { getSiteUrl, baseUrl } = usePlatformDomain();
   const [currentStep, setCurrentStep] = useState(1);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isDerivLinked, setIsDerivLinked] = useState(false);
@@ -89,7 +89,7 @@ export default function CreateSite() {
 
   // Form state
   const [siteName, setSiteName] = useState("");
-  const [subdomain, setSubdomain] = useState("");
+  const [siteSlug, setSiteSlug] = useState("");
   const [customDomain, setCustomDomain] = useState("");
   const [description, setDescription] = useState("");
   const [language, setLanguage] = useState("en");
@@ -103,17 +103,17 @@ export default function CreateSite() {
   const [derivAccountId, setDerivAccountId] = useState("");
   const [derivTokenHash, setDerivTokenHash] = useState("");
 
-  // Display domain (fallback to current hostname if not set)
-  const displayDomain = domain || window.location.hostname;
-
-  const generateSubdomain = (name: string) => {
-    return name.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 20);
+  const generateSlug = (name: string) => {
+    // Generate a unique slug from name + random suffix
+    const base = name.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 12);
+    const suffix = Math.random().toString(36).substring(2, 6);
+    return base ? `${base}-${suffix}` : suffix;
   };
 
   const handleNameChange = (name: string) => {
     setSiteName(name);
-    if (!subdomain || subdomain === generateSubdomain(siteName)) {
-      setSubdomain(generateSubdomain(name));
+    if (!siteSlug || siteSlug.startsWith(siteName.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 12))) {
+      setSiteSlug(generateSlug(name));
     }
   };
 
@@ -138,7 +138,7 @@ export default function CreateSite() {
       return;
     }
 
-    if (!siteName || !subdomain || !derivAccountId) {
+    if (!siteName || !siteSlug || !derivAccountId) {
       toast.error("Please complete all required fields");
       return;
     }
@@ -146,15 +146,15 @@ export default function CreateSite() {
     setIsDeploying(true);
 
     try {
-      // Check if subdomain is already taken
+      // Check if slug is already taken
       const { data: existingSite } = await supabase
         .from("sites")
         .select("id")
-        .eq("subdomain", subdomain)
+        .eq("subdomain", siteSlug)
         .single();
 
       if (existingSite) {
-        toast.error("This subdomain is already taken. Please choose another.");
+        toast.error("This site URL is already taken. Please choose another.");
         setIsDeploying(false);
         return;
       }
@@ -163,7 +163,7 @@ export default function CreateSite() {
       const { data, error } = await supabase.from("sites").insert({
         user_id: user.id,
         name: siteName,
-        subdomain: subdomain,
+        subdomain: siteSlug,
         custom_domain: customDomain || null,
         description: description || null,
         language: language,
@@ -207,18 +207,17 @@ export default function CreateSite() {
             </div>
 
             <div>
-              <Label htmlFor="subdomain">Subdomain *</Label>
-              <div className="mt-2 flex">
+              <Label htmlFor="site-slug">Site URL *</Label>
+              <div className="mt-2">
                 <Input
-                  id="subdomain"
-                  placeholder="mysite"
-                  value={subdomain}
-                  onChange={(e) => setSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ""))}
-                  className="rounded-r-none"
+                  id="site-slug"
+                  placeholder="my-trading-site"
+                  value={siteSlug}
+                  onChange={(e) => setSiteSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
                 />
-                <span className="flex items-center rounded-r-lg border border-l-0 border-border bg-secondary px-4 text-sm text-muted-foreground">
-                  .{displayDomain}
-                </span>
+                <p className="mt-1.5 text-xs text-muted-foreground font-mono">
+                  {getSiteUrl(siteSlug)}
+                </p>
               </div>
             </div>
 
@@ -283,11 +282,11 @@ export default function CreateSite() {
             </div>
 
             {/* URL Preview */}
-            {subdomain && (
+            {siteSlug && (
               <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
-                <Label className="text-xs text-primary">URL Preview</Label>
-                <p className="mt-1 font-mono text-sm text-foreground">
-                  https://{subdomain}.{displayDomain}
+                <Label className="text-xs text-primary">Your Site Link</Label>
+                <p className="mt-1 font-mono text-sm text-foreground break-all">
+                  {getSiteUrl(siteSlug)}
                 </p>
                 {customDomain && (
                   <p className="mt-1 font-mono text-xs text-muted-foreground">
@@ -505,7 +504,7 @@ export default function CreateSite() {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">URL</span>
-                <span className="font-mono text-sm">{subdomain}.mafomz.io</span>
+                <span className="font-mono text-sm break-all">{getSiteUrl(siteSlug)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Deriv Account</span>
@@ -554,7 +553,7 @@ export default function CreateSite() {
   const canProceed = () => {
     switch (currentStep) {
       case 1:
-        return siteName.length > 0 && subdomain.length > 0;
+        return siteName.length > 0 && siteSlug.length > 0;
       case 2:
         return isDerivLinked;
       default:
