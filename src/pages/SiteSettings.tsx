@@ -54,15 +54,12 @@ const SiteSettings = () => {
   const { siteId } = useParams<{ siteId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { domain } = usePlatformDomain();
+  const { getSiteUrl } = usePlatformDomain();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [site, setSite] = useState<Site | null>(null);
-
-  // Display domain with fallback
-  const displayDomain = domain || window.location.hostname;
 
   useEffect(() => {
     if (siteId) {
@@ -238,18 +235,15 @@ const SiteSettings = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="subdomain">Subdomain</Label>
-                    <div className="flex">
-                      <Input
-                        id="subdomain"
-                        value={site.subdomain}
-                        onChange={(e) => setSite({ ...site, subdomain: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
-                        className="rounded-r-none"
-                      />
-                      <div className="flex items-center px-3 bg-muted border border-l-0 border-input rounded-r-md text-sm text-muted-foreground">
-                        .{displayDomain}
-                      </div>
-                    </div>
+                    <Label htmlFor="subdomain">Site Slug</Label>
+                    <Input
+                      id="subdomain"
+                      value={site.subdomain}
+                      onChange={(e) => setSite({ ...site, subdomain: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
+                    />
+                    <p className="text-xs text-muted-foreground font-mono">
+                      {getSiteUrl(site.subdomain)}
+                    </p>
                   </div>
                 </div>
 

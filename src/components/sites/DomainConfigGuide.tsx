@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Copy, CheckCircle2, Globe, Server, ExternalLink, AlertCircle } from "lucide-react";
+import { Copy, CheckCircle2, Globe, Server, ExternalLink, AlertCircle, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePlatformDomain } from "@/hooks/usePlatformDomain";
@@ -12,7 +12,7 @@ interface DomainConfigGuideProps {
 
 export function DomainConfigGuide({ subdomain, customDomain }: DomainConfigGuideProps) {
   const [copied, setCopied] = useState<string | null>(null);
-  const { domain: platformDomain, fullSubdomainUrl } = usePlatformDomain();
+  const { getSiteUrl } = usePlatformDomain();
 
   const copyToClipboard = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
@@ -21,44 +21,41 @@ export function DomainConfigGuide({ subdomain, customDomain }: DomainConfigGuide
     setTimeout(() => setCopied(null), 2000);
   };
 
-  const siteUrl = fullSubdomainUrl(subdomain);
+  const siteUrl = getSiteUrl(subdomain);
   const serverIP = "185.158.133.1";
-
-  // Use the current domain for verification
-  const verificationPrefix = platformDomain.split(".")[0] || "platform";
 
   const dnsRecords = customDomain ? [
     { type: "A", name: "@", value: serverIP, description: "Root domain" },
     { type: "A", name: "www", value: serverIP, description: "WWW subdomain" },
-    { type: "TXT", name: `_${verificationPrefix}`, value: `verify=${subdomain}`, description: "Verification" },
+    { type: "TXT", name: "_verify", value: `site=${subdomain}`, description: "Verification" },
   ] : [];
 
   return (
     <Card className="glass border-border">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Globe className="w-5 h-5 text-primary" />
-          Domain Configuration
+          <Link2 className="w-5 h-5 text-primary" />
+          Site URL & Domain
         </CardTitle>
         <CardDescription>
-          Your site is accessible via subdomain and optionally your custom domain
+          Your site is accessible via a unique link and optionally your custom domain
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Default Subdomain */}
+        {/* Default Site URL - Path Based */}
         <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-primary">Default URL (Always Active)</p>
-              <p className="mt-1 font-mono text-foreground">{siteUrl}</p>
+              <p className="text-sm font-medium text-primary">Your Site Link (Always Active)</p>
+              <p className="mt-1 font-mono text-foreground break-all">{siteUrl}</p>
             </div>
             <div className="flex gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => copyToClipboard(siteUrl, "subdomain")}
+                onClick={() => copyToClipboard(siteUrl, "siteurl")}
               >
-                {copied === "subdomain" ? (
+                {copied === "siteurl" ? (
                   <CheckCircle2 className="h-4 w-4 text-success" />
                 ) : (
                   <Copy className="h-4 w-4" />
@@ -130,7 +127,7 @@ export function DomainConfigGuide({ subdomain, customDomain }: DomainConfigGuide
               <div className="mt-4 rounded-lg bg-warning/10 border border-warning/30 p-3">
                 <p className="text-sm text-warning">
                   <strong>Note:</strong> DNS changes can take 24-72 hours to propagate globally. 
-                  Your subdomain URL will always work as a backup.
+                  Your site link above will always work as a backup.
                 </p>
               </div>
             </div>
@@ -139,26 +136,28 @@ export function DomainConfigGuide({ subdomain, customDomain }: DomainConfigGuide
           <div className="rounded-lg border border-dashed border-border p-6 text-center">
             <Globe className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
             <p className="text-sm text-muted-foreground">
-              No custom domain configured. Your site is accessible via the subdomain above.
+              No custom domain configured. Your site is accessible via the link above.
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              Add a custom domain in the settings to use your own URL.
+              Add a custom domain in the basic settings to use your own URL.
             </p>
           </div>
         )}
 
         {/* Quick Guide */}
-        <div className="rounded-lg bg-secondary/30 p-4">
-          <h4 className="font-semibold mb-2">Quick Domain Setup Guide</h4>
-          <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
-            <li>Login to your domain registrar (GoDaddy, Namecheap, etc.)</li>
-            <li>Navigate to DNS Management / DNS Settings</li>
-            <li>Add the A records pointing to <code className="bg-background px-1 rounded">{serverIP}</code></li>
-            <li>Add the TXT record for verification</li>
-            <li>Wait 24-72 hours for DNS propagation</li>
-            <li>Your custom domain will automatically start working</li>
-          </ol>
-        </div>
+        {customDomain && (
+          <div className="rounded-lg bg-secondary/30 p-4">
+            <h4 className="font-semibold mb-2">Quick Domain Setup Guide</h4>
+            <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
+              <li>Login to your domain registrar (GoDaddy, Namecheap, etc.)</li>
+              <li>Navigate to DNS Management / DNS Settings</li>
+              <li>Add the A records pointing to <code className="bg-background px-1 rounded">{serverIP}</code></li>
+              <li>Add the TXT record for verification</li>
+              <li>Wait 24-72 hours for DNS propagation</li>
+              <li>Your custom domain will automatically start working</li>
+            </ol>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

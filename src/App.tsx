@@ -8,6 +8,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import Sites from "./pages/Sites";
+import PublicSite from "./pages/PublicSite";
 import CreateSite from "./pages/CreateSite";
 import SiteSettings from "./pages/SiteSettings";
 import AdminSettings from "./pages/AdminSettings";
@@ -32,6 +33,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Landing />} />
+            <Route path="/s/:slug" element={<PublicSite />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<ProtectedRoute><UserDashboard /></ProtectedRoute>} />
             <Route path="/sites" element={<ProtectedRoute><Sites /></ProtectedRoute>} />

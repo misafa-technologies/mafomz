@@ -1,76 +1,67 @@
-import { useState, useEffect, useMemo } from "react";
+import { useMemo } from "react";
 
 interface PlatformDomain {
-  domain: string;
-  isLoading: boolean;
-  fullSubdomainUrl: (subdomain: string) => string;
+  baseUrl: string;
+  getSiteUrl: (slug: string) => string;
+  getSitePreviewUrl: (slug: string) => string;
 }
 
 /**
- * Extracts the base domain from the current hostname.
- * Examples:
- * - "mysite.lovable.app" → "lovable.app"
- * - "preview--myproject.lovable.app" → "lovable.app"
- * - "myapp.vercel.app" → "vercel.app"
- * - "subdomain.mycustomdomain.com" → "mycustomdomain.com"
- * - "localhost:5173" → "localhost:5173"
+ * Generates a unique site slug (like payment link IDs)
+ * Format: 8 character alphanumeric string
  */
-function extractBaseDomain(hostname: string): string {
-  // Handle localhost
-  if (hostname === "localhost" || hostname.startsWith("localhost:")) {
-    return hostname.includes(":") ? hostname : `${hostname}:${window.location.port || "5173"}`;
+export function generateSiteSlug(): string {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  let slug = '';
+  for (let i = 0; i < 8; i++) {
+    slug += chars.charAt(Math.floor(Math.random() * chars.length));
   }
-
-  // Remove port if present
-  const hostWithoutPort = hostname.split(":")[0];
-  const parts = hostWithoutPort.split(".");
-
-  // Single part (localhost without port, rare)
-  if (parts.length === 1) {
-    return hostname;
-  }
-
-  // Two parts (e.g., "example.com")
-  if (parts.length === 2) {
-    return hostWithoutPort;
-  }
-
-  // Three or more parts - extract base domain (last 2 parts)
-  // This handles: subdomain.domain.com, preview--project.lovable.app, etc.
-  return parts.slice(-2).join(".");
+  return slug;
 }
 
 /**
- * Hook that dynamically detects the current platform domain.
- * Always uses the actual domain the site is running on - no hardcoded fallbacks.
+ * Hook that provides URL generation for sites using path-based routing.
+ * Sites are accessible via /s/[slug] paths instead of subdomains.
+ * This works on any domain (Lovable, Vercel, custom domains, etc.)
  */
 export function usePlatformDomain(): PlatformDomain {
-  const baseDomain = useMemo(() => {
-    return extractBaseDomain(window.location.hostname);
+  const baseUrl = useMemo(() => {
+    const protocol = window.location.protocol;
+    const host = window.location.host; // includes port if present
+    return `${protocol}//${host}`;
   }, []);
 
-  const fullSubdomainUrl = (subdomain: string): string => {
-    if (!subdomain) return "";
-    
-    // For localhost, use the same protocol and port
-    if (baseDomain.startsWith("localhost")) {
-      return `http://${subdomain}.${baseDomain}`;
-    }
-    
-    return `https://${subdomain}.${baseDomain}`;
+  const getSiteUrl = (slug: string): string => {
+    if (!slug) return "";
+    return `${baseUrl}/s/${slug}`;
+  };
+
+  const getSitePreviewUrl = (slug: string): string => {
+    if (!slug) return "";
+    return `${baseUrl}/s/${slug}`;
   };
 
   return {
-    domain: baseDomain,
-    isLoading: false, // No async loading needed - it's instant
-    fullSubdomainUrl,
+    baseUrl,
+    getSiteUrl,
+    getSitePreviewUrl,
   };
 }
 
 /**
- * Get the current platform domain synchronously.
- * Use this when you need the domain immediately without a hook.
+ * Get site URL synchronously without a hook.
  */
-export function getCurrentDomain(): string {
-  return extractBaseDomain(window.location.hostname);
+export function getSiteUrl(slug: string): string {
+  const protocol = window.location.protocol;
+  const host = window.location.host;
+  return `${protocol}//${host}/s/${slug}`;
+}
+
+/**
+ * Get the current base URL synchronously.
+ */
+export function getCurrentBaseUrl(): string {
+  const protocol = window.location.protocol;
+  const host = window.location.host;
+  return `${protocol}//${host}`;
 }
