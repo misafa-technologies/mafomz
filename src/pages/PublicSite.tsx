@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, AlertCircle, ExternalLink } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SiteLanding } from "@/components/public-site/SiteLanding";
+import { SiteUserDashboard } from "@/components/public-site/SiteUserDashboard";
+import type { SiteUser } from "@/components/public-site/DerivAuthButton";
 
 interface SiteData {
   id: string;
@@ -13,45 +16,37 @@ interface SiteData {
   secondary_color: string;
   dark_mode: boolean;
   footer_text: string | null;
-  apps: string[] | null;
+  apps: string[];
   deriv_account_id: string | null;
   status: string | null;
 }
 
-const derivAppUrls: Record<string, { name: string; url: string; icon: string }> = {
-  dtrader: {
-    name: "DTrader",
-    url: "https://app.deriv.com/dtrader",
-    icon: "📈",
-  },
-  dbot: {
-    name: "DBot",
-    url: "https://app.deriv.com/bot",
-    icon: "🤖",
-  },
-  smarttrader: {
-    name: "SmartTrader",
-    url: "https://smarttrader.deriv.com/en/trading.html",
-    icon: "💹",
-  },
-  derivgo: {
-    name: "Deriv GO",
-    url: "https://app.deriv.com/derivgo",
-    icon: "📱",
-  },
-};
+const SITE_USER_KEY = 'site_user';
 
 export default function PublicSite() {
   const { slug } = useParams<{ slug: string }>();
   const [site, setSite] = useState<SiteData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<SiteUser | null>(null);
 
   useEffect(() => {
     if (slug) {
       fetchSite();
+      loadStoredUser();
     }
   }, [slug]);
+
+  const loadStoredUser = () => {
+    try {
+      const stored = localStorage.getItem(`${SITE_USER_KEY}_${slug}`);
+      if (stored) {
+        setCurrentUser(JSON.parse(stored));
+      }
+    } catch (err) {
+      console.error("Error loading stored user:", err);
+    }
+  };
 
   const fetchSite = async () => {
     try {
@@ -69,7 +64,6 @@ export default function PublicSite() {
         return;
       }
 
-      // Parse apps - handle JSON type safely
       const apps = Array.isArray(data.apps) 
         ? data.apps.filter((app): app is string => typeof app === 'string')
         : [];
@@ -84,6 +78,16 @@ export default function PublicSite() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleAuthSuccess = (user: SiteUser) => {
+    setCurrentUser(user);
+    localStorage.setItem(`${SITE_USER_KEY}_${slug}`, JSON.stringify(user));
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    localStorage.removeItem(`${SITE_USER_KEY}_${slug}`);
   };
 
   if (isLoading) {
@@ -109,130 +113,71 @@ export default function PublicSite() {
     );
   }
 
-  const apps = site.apps || [];
-
-  return (
-    <div 
-      className="min-h-screen"
-      style={{
-        backgroundColor: site.dark_mode ? '#0a0a0a' : '#ffffff',
-        color: site.dark_mode ? '#ffffff' : '#0a0a0a',
-      }}
-    >
-      {/* Header */}
-      <header 
-        className="border-b py-4 px-6"
-        style={{ 
-          borderColor: site.dark_mode ? '#222' : '#eee',
-          background: site.dark_mode ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.9)',
+  // Show dashboard if user is logged in
+  if (currentUser) {
+    return (
+      <div
+        style={{
+          backgroundColor: site.dark_mode ? '#0a0a0a' : '#ffffff',
+          minHeight: '100vh',
         }}
       >
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {site.logo_url ? (
-              <img src={site.logo_url} alt={site.name} className="h-10 w-10 rounded-lg object-cover" />
-            ) : (
-              <div 
-                className="h-10 w-10 rounded-lg flex items-center justify-center text-white font-bold"
-                style={{ backgroundColor: site.primary_color }}
-              >
-                {site.name.charAt(0).toUpperCase()}
-              </div>
-            )}
-            <h1 className="text-xl font-bold">{site.name}</h1>
-          </div>
-          <Button
-            style={{ 
-              backgroundColor: site.primary_color,
-              color: '#fff',
-            }}
-          >
-            Get Started
-          </Button>
-        </div>
-      </header>
-
-      {/* Hero Section */}
-      <section className="py-20 px-6">
-        <div className="max-w-4xl mx-auto text-center space-y-6">
-          <h2 className="text-4xl md:text-5xl font-bold">
-            Welcome to {site.name}
-          </h2>
-          {site.description && (
-            <p className="text-xl opacity-70 max-w-2xl mx-auto">
-              {site.description}
-            </p>
-          )}
-          <div className="flex gap-4 justify-center flex-wrap">
-            <Button
-              size="lg"
-              style={{ 
-                backgroundColor: site.primary_color,
-                color: '#fff',
-              }}
-            >
-              Start Trading
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              style={{ 
-                borderColor: site.primary_color,
-                color: site.primary_color,
-              }}
-            >
-              Learn More
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* Apps Section */}
-      {apps.length > 0 && (
-        <section className="py-16 px-6">
-          <div className="max-w-6xl mx-auto">
-            <h3 className="text-2xl font-bold text-center mb-10">Trading Platforms</h3>
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {apps.map((appId) => {
-                const app = derivAppUrls[appId];
-                if (!app) return null;
-                return (
-                  <a
-                    key={appId}
-                    href={app.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-6 rounded-xl border transition-all hover:scale-105"
-                    style={{
-                      borderColor: site.dark_mode ? '#333' : '#ddd',
-                      backgroundColor: site.dark_mode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
-                    }}
-                  >
-                    <div className="text-4xl mb-3">{app.icon}</div>
-                    <h4 className="font-semibold text-lg">{app.name}</h4>
-                    <div className="flex items-center gap-1 mt-2 text-sm opacity-60">
-                      <span>Open Platform</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </div>
-                  </a>
-                );
-              })}
+        {/* Header */}
+        <header 
+          className="border-b py-4 px-6 sticky top-0 z-50 backdrop-blur-lg"
+          style={{ 
+            borderColor: site.dark_mode ? '#222' : '#eee',
+            background: site.dark_mode ? 'rgba(10,10,10,0.9)' : 'rgba(255,255,255,0.9)',
+          }}
+        >
+          <div className="max-w-6xl mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {site.logo_url ? (
+                <img src={site.logo_url} alt={site.name} className="h-10 w-10 rounded-lg object-cover" />
+              ) : (
+                <div 
+                  className="h-10 w-10 rounded-lg flex items-center justify-center text-white font-bold"
+                  style={{ backgroundColor: site.primary_color }}
+                >
+                  {site.name.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <h1 className="text-xl font-bold" style={{ color: site.dark_mode ? '#fff' : '#000' }}>
+                {site.name}
+              </h1>
             </div>
           </div>
-        </section>
-      )}
+        </header>
 
-      {/* Footer */}
-      <footer 
-        className="py-8 px-6 border-t mt-auto"
-        style={{ borderColor: site.dark_mode ? '#222' : '#eee' }}
-      >
-        <div className="max-w-6xl mx-auto text-center">
-          <p className="opacity-60">
-            {site.footer_text || `© ${new Date().getFullYear()} ${site.name}. All rights reserved.`}
-          </p>
-        </div>
-      </footer>
-    </div>
-  );
+        <SiteUserDashboard
+          user={currentUser}
+          siteId={site.id}
+          siteName={site.name}
+          primaryColor={site.primary_color}
+          secondaryColor={site.secondary_color}
+          darkMode={site.dark_mode}
+          apps={site.apps}
+          onLogout={handleLogout}
+        />
+
+        {/* Footer */}
+        <footer 
+          className="py-8 px-6 border-t"
+          style={{ 
+            borderColor: site.dark_mode ? '#222' : '#eee',
+            color: site.dark_mode ? '#fff' : '#000',
+          }}
+        >
+          <div className="max-w-6xl mx-auto text-center">
+            <p className="opacity-60">
+              {site.footer_text || `© ${new Date().getFullYear()} ${site.name}. All rights reserved.`}
+            </p>
+          </div>
+        </footer>
+      </div>
+    );
+  }
+
+  // Show landing page for non-logged in users
+  return <SiteLanding site={site} onAuthSuccess={handleAuthSuccess} />;
 }

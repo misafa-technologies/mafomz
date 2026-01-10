@@ -9,9 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, Save, Loader2, Globe, FileText, Image, Mail, Phone } from "lucide-react";
+import { Settings, Save, Loader2, Globe, FileText, Image, Mail, Phone, DollarSign } from "lucide-react";
 import { RoleManagement } from "@/components/admin/RoleManagement";
 import { MpesaGlobalConfig } from "@/components/admin/MpesaGlobalConfig";
+import { CommissionSplitConfig } from "@/components/admin/CommissionSplitConfig";
 
 interface PlatformSettings {
   platform_name: string;
@@ -151,6 +152,7 @@ const AdminSettings = () => {
         <Tabs defaultValue="branding" className="space-y-6">
           <TabsList className="glass">
             <TabsTrigger value="branding">Branding</TabsTrigger>
+            <TabsTrigger value="commissions">Commissions</TabsTrigger>
             <TabsTrigger value="payments">Payments</TabsTrigger>
             <TabsTrigger value="roles">User Roles</TabsTrigger>
           </TabsList>
@@ -285,6 +287,11 @@ const AdminSettings = () => {
                 </Button>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Commissions Tab */}
+          <TabsContent value="commissions">
+            <CommissionSplitConfig />
           </TabsContent>
 
           {/* Payments Tab */}
