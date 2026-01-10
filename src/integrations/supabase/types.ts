@@ -230,6 +230,50 @@ export type Database = {
           },
         ]
       }
+      commission_splits: {
+        Row: {
+          amount: number
+          commission_id: string
+          created_at: string
+          id: string
+          paid_at: string | null
+          percentage: number
+          recipient_id: string | null
+          recipient_type: string
+          status: string
+        }
+        Insert: {
+          amount?: number
+          commission_id: string
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          percentage?: number
+          recipient_id?: string | null
+          recipient_type: string
+          status?: string
+        }
+        Update: {
+          amount?: number
+          commission_id?: string
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          percentage?: number
+          recipient_id?: string | null
+          recipient_type?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_splits_commission_id_fkey"
+            columns: ["commission_id"]
+            isOneToOne: false
+            referencedRelation: "commissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commissions: {
         Row: {
           amount: number
@@ -384,6 +428,104 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      site_bot_store: {
+        Row: {
+          bot_id: string
+          created_at: string
+          downloads_count: number | null
+          id: string
+          is_public: boolean | null
+          price: number | null
+          site_id: string
+        }
+        Insert: {
+          bot_id: string
+          created_at?: string
+          downloads_count?: number | null
+          id?: string
+          is_public?: boolean | null
+          price?: number | null
+          site_id: string
+        }
+        Update: {
+          bot_id?: string
+          created_at?: string
+          downloads_count?: number | null
+          id?: string
+          is_public?: boolean | null
+          price?: number | null
+          site_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_bot_store_bot_id_fkey"
+            columns: ["bot_id"]
+            isOneToOne: false
+            referencedRelation: "bot_configs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_bot_store_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      site_users: {
+        Row: {
+          created_at: string
+          deriv_accounts: Json | null
+          deriv_balance: number | null
+          deriv_currency: string | null
+          deriv_email: string | null
+          deriv_fullname: string | null
+          deriv_loginid: string
+          id: string
+          is_active: boolean | null
+          last_login_at: string | null
+          site_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          deriv_accounts?: Json | null
+          deriv_balance?: number | null
+          deriv_currency?: string | null
+          deriv_email?: string | null
+          deriv_fullname?: string | null
+          deriv_loginid: string
+          id?: string
+          is_active?: boolean | null
+          last_login_at?: string | null
+          site_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          deriv_accounts?: Json | null
+          deriv_balance?: number | null
+          deriv_currency?: string | null
+          deriv_email?: string | null
+          deriv_fullname?: string | null
+          deriv_loginid?: string
+          id?: string
+          is_active?: boolean | null
+          last_login_at?: string | null
+          site_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_users_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sites: {
         Row: {
