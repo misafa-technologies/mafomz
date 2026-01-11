@@ -12,12 +12,14 @@ import {
   LogOut, 
   Download,
   Play,
-  ExternalLink,
   RefreshCw,
-  Sparkles
+  Sparkles,
+  Settings
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { SiteUser } from "./DerivAuthButton";
+import { TradingPanel } from "./TradingPanel";
+import { BotRunner } from "./BotRunner";
 
 interface SiteUserDashboardProps {
   user: SiteUser;
@@ -40,6 +42,10 @@ interface StoreBot {
     description: string;
     asset: string;
     trade_type: string;
+    stake_amount: number;
+    max_daily_trades: number;
+    stop_loss_percentage: number;
+    take_profit_percentage: number;
   };
 }
 
@@ -55,13 +61,6 @@ interface AISignal {
   expires_at: string;
 }
 
-const derivAppUrls: Record<string, { name: string; url: string; icon: string }> = {
-  dtrader: { name: "DTrader", url: "https://app.deriv.com/dtrader", icon: "📈" },
-  dbot: { name: "DBot", url: "https://app.deriv.com/bot", icon: "🤖" },
-  smarttrader: { name: "SmartTrader", url: "https://smarttrader.deriv.com/en/trading.html", icon: "💹" },
-  derivgo: { name: "Deriv GO", url: "https://app.deriv.com/derivgo", icon: "📱" },
-};
-
 export function SiteUserDashboard({ 
   user, 
   siteId, 
@@ -76,10 +75,24 @@ export function SiteUserDashboard({
   const [aiSignals, setAiSignals] = useState<AISignal[]>([]);
   const [isLoadingBots, setIsLoadingBots] = useState(true);
   const [isLoadingSignals, setIsLoadingSignals] = useState(true);
+  const [selectedBot, setSelectedBot] = useState<StoreBot | null>(null);
+  const [userToken, setUserToken] = useState<string | null>(null);
 
   useEffect(() => {
     fetchStoreBots();
     fetchAiSignals();
+    // Get token from localStorage if available
+    const storedUser = localStorage.getItem(`site_user_${siteId}`);
+    if (storedUser) {
+      try {
+        const parsed = JSON.parse(storedUser);
+        if (parsed.token) {
+          setUserToken(parsed.token);
+        }
+      } catch (e) {
+        console.error("Error parsing stored user:", e);
+      }
+    }
   }, [siteId]);
 
   const fetchStoreBots = async () => {
@@ -95,7 +108,11 @@ export function SiteUserDashboard({
             name,
             description,
             asset,
-            trade_type
+            trade_type,
+            stake_amount,
+            max_daily_trades,
+            stop_loss_percentage,
+            take_profit_percentage
           )
         `)
         .eq("site_id", siteId)
@@ -163,9 +180,12 @@ export function SiteUserDashboard({
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm opacity-60">Account Balance</p>
+                <p className="text-sm opacity-60">Deriv Account Balance</p>
                 <p className="text-3xl font-bold" style={{ color: primaryColor }}>
                   {user.currency} {user.balance.toLocaleString()}
+                </p>
+                <p className="text-xs opacity-50 mt-1">
+                  Account: {user.loginid}
                 </p>
               </div>
               <Wallet className="w-12 h-12 opacity-20" />
@@ -183,101 +203,117 @@ export function SiteUserDashboard({
         </Card>
 
         {/* Main Content Tabs */}
-        <Tabs defaultValue="platforms" className="space-y-4">
+        <Tabs defaultValue="trade" className="space-y-4">
           <TabsList 
             className="w-full justify-start"
             style={{ 
               backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#f5f5f5',
             }}
           >
-            <TabsTrigger value="platforms" className="gap-2">
-              <BarChart3 className="w-4 h-4" /> Platforms
+            <TabsTrigger value="trade" className="gap-2">
+              <BarChart3 className="w-4 h-4" /> Trade
             </TabsTrigger>
             <TabsTrigger value="bots" className="gap-2">
-              <Bot className="w-4 h-4" /> Bot Store
+              <Bot className="w-4 h-4" /> Bots
             </TabsTrigger>
             <TabsTrigger value="signals" className="gap-2">
               <TrendingUp className="w-4 h-4" /> AI Signals
             </TabsTrigger>
           </TabsList>
 
-          {/* Trading Platforms Tab */}
-          <TabsContent value="platforms">
-            <div className="grid md:grid-cols-2 gap-4">
-              {apps.map((appId) => {
-                const app = derivAppUrls[appId];
-                if (!app) return null;
-                return (
-                  <a
-                    key={appId}
-                    href={app.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block"
-                  >
-                    <Card style={cardStyle} className="hover:scale-[1.02] transition-transform cursor-pointer">
-                      <CardContent className="p-6 flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <span className="text-4xl">{app.icon}</span>
-                          <div>
-                            <h3 className="font-semibold text-lg">{app.name}</h3>
-                            <p className="text-sm opacity-60">Open trading platform</p>
-                          </div>
-                        </div>
-                        <ExternalLink className="w-5 h-5 opacity-40" />
-                      </CardContent>
-                    </Card>
-                  </a>
-                );
-              })}
-            </div>
+          {/* Trading Tab */}
+          <TabsContent value="trade">
+            <TradingPanel 
+              userToken={userToken || ""} 
+              primaryColor={primaryColor}
+              darkMode={darkMode}
+            />
           </TabsContent>
 
           {/* Bot Store Tab */}
           <TabsContent value="bots">
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {isLoadingBots ? (
-                <Card style={cardStyle}>
-                  <CardContent className="p-6 text-center">
-                    <RefreshCw className="w-8 h-8 animate-spin mx-auto opacity-50" />
-                    <p className="mt-2 opacity-60">Loading bots...</p>
-                  </CardContent>
-                </Card>
-              ) : storeBots.length === 0 ? (
-                <Card style={cardStyle}>
-                  <CardContent className="p-6 text-center">
-                    <Bot className="w-12 h-12 mx-auto opacity-30" />
-                    <p className="mt-2 opacity-60">No bots available yet</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                storeBots.map((storeBot) => (
-                  <Card key={storeBot.id} style={cardStyle}>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="flex items-center gap-2 text-lg">
-                        <Bot className="w-5 h-5" style={{ color: primaryColor }} />
-                        {storeBot.bot_configs?.name}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <p className="text-sm opacity-70">{storeBot.bot_configs?.description}</p>
-                      <div className="flex gap-2">
-                        <Badge variant="outline">{storeBot.bot_configs?.asset}</Badge>
-                        <Badge variant="outline">{storeBot.bot_configs?.trade_type}</Badge>
-                      </div>
-                      <div className="flex items-center justify-between pt-2">
-                        <span className="text-sm opacity-60">
-                          {storeBot.downloads_count} downloads
-                        </span>
-                        <Button size="sm" style={{ backgroundColor: primaryColor, color: '#fff' }}>
-                          <Download className="w-4 h-4 mr-1" />
-                          {storeBot.price > 0 ? `$${storeBot.price}` : 'Free'}
-                        </Button>
-                      </div>
+            <div className="grid lg:grid-cols-2 gap-6">
+              {/* Bot List */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Available Bots</h3>
+                {isLoadingBots ? (
+                  <Card style={cardStyle}>
+                    <CardContent className="p-6 text-center">
+                      <RefreshCw className="w-8 h-8 animate-spin mx-auto opacity-50" />
+                      <p className="mt-2 opacity-60">Loading bots...</p>
                     </CardContent>
                   </Card>
-                ))
-              )}
+                ) : storeBots.length === 0 ? (
+                  <Card style={cardStyle}>
+                    <CardContent className="p-6 text-center">
+                      <Bot className="w-12 h-12 mx-auto opacity-30" />
+                      <p className="mt-2 opacity-60">No bots available yet</p>
+                      <p className="text-sm opacity-40 mt-1">
+                        Check back later for trading bots
+                      </p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="space-y-3">
+                    {storeBots.map((storeBot) => (
+                      <Card 
+                        key={storeBot.id} 
+                        style={cardStyle}
+                        className={`cursor-pointer transition-all hover:scale-[1.01] ${selectedBot?.id === storeBot.id ? 'ring-2' : ''}`}
+                        onClick={() => setSelectedBot(storeBot)}
+                      >
+                        <CardContent className="p-4 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <Bot className="w-8 h-8" style={{ color: primaryColor }} />
+                            <div>
+                              <h4 className="font-semibold">{storeBot.bot_configs?.name}</h4>
+                              <p className="text-sm opacity-60">{storeBot.bot_configs?.asset}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <Badge style={{ backgroundColor: primaryColor, color: '#fff' }}>
+                              {storeBot.price > 0 ? `$${storeBot.price}` : 'Free'}
+                            </Badge>
+                            <p className="text-xs opacity-50 mt-1">
+                              {storeBot.downloads_count} uses
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Bot Runner */}
+              <div>
+                {selectedBot && userToken ? (
+                  <BotRunner
+                    userToken={userToken}
+                    primaryColor={primaryColor}
+                    darkMode={darkMode}
+                    botConfig={{
+                      name: selectedBot.bot_configs.name,
+                      asset: selectedBot.bot_configs.asset || "R_100",
+                      stake_amount: selectedBot.bot_configs.stake_amount || 1,
+                      max_daily_trades: selectedBot.bot_configs.max_daily_trades || 50,
+                      stop_loss_percentage: selectedBot.bot_configs.stop_loss_percentage || 10,
+                      take_profit_percentage: selectedBot.bot_configs.take_profit_percentage || 20,
+                    }}
+                  />
+                ) : (
+                  <Card style={cardStyle}>
+                    <CardContent className="p-6 text-center">
+                      <Settings className="w-12 h-12 mx-auto opacity-30" />
+                      <p className="mt-2 opacity-60">
+                        {!userToken 
+                          ? "Reconnect to run bots" 
+                          : "Select a bot to run"}
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
             </div>
           </TabsContent>
 
@@ -311,6 +347,9 @@ export function SiteUserDashboard({
                   <CardContent className="p-6 text-center">
                     <TrendingUp className="w-12 h-12 mx-auto opacity-30" />
                     <p className="mt-2 opacity-60">No active signals at the moment</p>
+                    <p className="text-sm opacity-40 mt-1">
+                      AI signals will appear here when available
+                    </p>
                   </CardContent>
                 </Card>
               ) : (

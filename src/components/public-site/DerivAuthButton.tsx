@@ -1,9 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Loader2, LogIn, ExternalLink, CheckCircle, AlertCircle } from "lucide-react";
+import { Loader2, LogIn } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface DerivAuthButtonProps {
@@ -24,162 +21,112 @@ export interface SiteUser {
   accounts: Array<{ loginid: string; currency: string }>;
 }
 
-export function DerivAuthButton({ siteId, siteName, primaryColor, darkMode, onSuccess }: DerivAuthButtonProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [token, setToken] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+const DERIV_APP_ID = "1089";
+const OAUTH_STATE_KEY = "deriv_oauth_state";
 
-  const handleAuth = async () => {
-    if (!token.trim()) {
-      setError("Please enter your Deriv API token");
+export function DerivAuthButton({ siteId, siteName, primaryColor, darkMode, onSuccess }: DerivAuthButtonProps) {
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    // Check for OAuth callback tokens in URL
+    handleOAuthCallback();
+  }, []);
+
+  const handleOAuthCallback = async () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tokens: string[] = [];
+    const accounts: string[] = [];
+    
+    // Deriv returns tokens as token1, token2, etc. and accounts as acct1, acct2, etc.
+    for (let i = 1; i <= 10; i++) {
+      const token = urlParams.get(`token${i}`);
+      const acct = urlParams.get(`acct${i}`);
+      if (token && acct) {
+        tokens.push(token);
+        accounts.push(acct);
+      }
+    }
+
+    if (tokens.length === 0) return;
+
+    // Verify state to prevent CSRF
+    const savedState = localStorage.getItem(OAUTH_STATE_KEY);
+    const returnedState = urlParams.get("state");
+    
+    if (!savedState || savedState !== returnedState) {
+      console.error("OAuth state mismatch");
+      // Clear URL params
+      window.history.replaceState({}, document.title, window.location.pathname);
       return;
     }
 
+    localStorage.removeItem(OAUTH_STATE_KEY);
     setIsLoading(true);
-    setError(null);
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke("deriv-oauth-callback", {
-        body: { token, siteId },
+      // Use the first token to authenticate
+      const { data, error } = await supabase.functions.invoke("deriv-oauth-callback", {
+        body: { 
+          token: tokens[0], 
+          siteId,
+          accounts: accounts.map((loginid, i) => ({ loginid, token: tokens[i] }))
+        },
       });
 
-      if (fnError) throw fnError;
+      if (error) throw error;
 
       if (data.error) {
-        setError(data.error);
+        console.error("Auth error:", data.error);
         return;
       }
 
-      setSuccess(true);
-      setTimeout(() => {
-        onSuccess(data.user);
-        setIsOpen(false);
-        setToken("");
-        setSuccess(false);
-      }, 1500);
+      onSuccess(data.user);
     } catch (err) {
-      console.error("Auth error:", err);
-      setError("Failed to authenticate. Please try again.");
+      console.error("OAuth callback error:", err);
     } finally {
       setIsLoading(false);
+      // Clear URL params
+      window.history.replaceState({}, document.title, window.location.pathname);
     }
   };
 
-  return (
-    <>
+  const initiateOAuth = () => {
+    // Generate state for CSRF protection
+    const state = crypto.randomUUID();
+    localStorage.setItem(OAUTH_STATE_KEY, state);
+    
+    // Store site info for callback
+    localStorage.setItem("oauth_site_id", siteId);
+
+    // Build OAuth URL
+    const currentUrl = window.location.origin + window.location.pathname;
+    const oauthUrl = `https://oauth.deriv.com/oauth2/authorize?app_id=${DERIV_APP_ID}&l=EN&brand=deriv&state=${state}`;
+    
+    // Redirect to Deriv OAuth
+    window.location.href = oauthUrl;
+  };
+
+  if (isLoading) {
+    return (
       <Button
-        onClick={() => setIsOpen(true)}
+        disabled
         style={{ backgroundColor: primaryColor, color: '#fff' }}
         className="gap-2"
       >
-        <LogIn className="w-4 h-4" />
-        Sign In with Deriv
+        <Loader2 className="w-4 h-4 animate-spin" />
+        Connecting...
       </Button>
+    );
+  }
 
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent 
-          className="sm:max-w-md"
-          style={{
-            backgroundColor: darkMode ? '#1a1a1a' : '#fff',
-            color: darkMode ? '#fff' : '#000',
-            borderColor: darkMode ? '#333' : '#ddd',
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <LogIn className="w-5 h-5" style={{ color: primaryColor }} />
-              Sign In to {siteName}
-            </DialogTitle>
-            <DialogDescription style={{ color: darkMode ? '#aaa' : '#666' }}>
-              Connect your Deriv account to access trading features
-            </DialogDescription>
-          </DialogHeader>
-
-          {success ? (
-            <div className="flex flex-col items-center justify-center py-8 gap-4">
-              <CheckCircle className="w-16 h-16 text-green-500" />
-              <p className="text-lg font-medium">Successfully authenticated!</p>
-            </div>
-          ) : (
-            <div className="space-y-6 py-4">
-              <div className="space-y-2">
-                <Label>Deriv API Token</Label>
-                <Input
-                  type="password"
-                  placeholder="Enter your API token"
-                  value={token}
-                  onChange={(e) => setToken(e.target.value)}
-                  className="font-mono"
-                  style={{
-                    backgroundColor: darkMode ? '#0a0a0a' : '#fff',
-                    borderColor: darkMode ? '#333' : '#ddd',
-                    color: darkMode ? '#fff' : '#000',
-                  }}
-                />
-              </div>
-
-              <div 
-                className="p-4 rounded-lg text-sm space-y-2"
-                style={{ 
-                  backgroundColor: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
-                }}
-              >
-                <p className="font-medium">How to get your API token:</p>
-                <ol className="list-decimal list-inside space-y-1 opacity-80">
-                  <li>Go to Deriv API Token Manager</li>
-                  <li>Create a new token with "Read" and "Trade" scopes</li>
-                  <li>Copy and paste the token above</li>
-                </ol>
-                <a
-                  href="https://app.deriv.com/account/api-token"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 mt-2"
-                  style={{ color: primaryColor }}
-                >
-                  Get API Token <ExternalLink className="w-3 h-3" />
-                </a>
-              </div>
-
-              {error && (
-                <div className="flex items-center gap-2 text-red-500 text-sm">
-                  <AlertCircle className="w-4 h-4" />
-                  {error}
-                </div>
-              )}
-
-              <div className="flex gap-3 justify-end">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsOpen(false)}
-                  style={{
-                    borderColor: darkMode ? '#333' : '#ddd',
-                    color: darkMode ? '#fff' : '#000',
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleAuth}
-                  disabled={isLoading || !token.trim()}
-                  style={{ backgroundColor: primaryColor, color: '#fff' }}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                      Connecting...
-                    </>
-                  ) : (
-                    "Connect Account"
-                  )}
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </>
+  return (
+    <Button
+      onClick={initiateOAuth}
+      style={{ backgroundColor: primaryColor, color: '#fff' }}
+      className="gap-2"
+    >
+      <LogIn className="w-4 h-4" />
+      Sign Up / Login with Deriv
+    </Button>
   );
 }
