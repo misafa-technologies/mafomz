@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Bot, TrendingUp, Shield, Zap } from "lucide-react";
+import { Bot, TrendingUp, Shield, Zap, BarChart3, Users } from "lucide-react";
 import { DerivAuthButton, SiteUser } from "./DerivAuthButton";
 
 interface SiteData {
@@ -19,38 +19,16 @@ interface SiteLandingProps {
   onAuthSuccess: (user: SiteUser) => void;
 }
 
-const derivAppUrls: Record<string, { name: string; url: string; icon: string; description: string }> = {
-  dtrader: {
-    name: "DTrader",
-    url: "https://app.deriv.com/dtrader",
-    icon: "📈",
-    description: "Trade forex, indices, and commodities with advanced charting",
-  },
-  dbot: {
-    name: "DBot",
-    url: "https://app.deriv.com/bot",
-    icon: "🤖",
-    description: "Automate your trading strategies with drag-and-drop bots",
-  },
-  smarttrader: {
-    name: "SmartTrader",
-    url: "https://smarttrader.deriv.com/en/trading.html",
-    icon: "💹",
-    description: "Classic trading interface with options and multipliers",
-  },
-  derivgo: {
-    name: "Deriv GO",
-    url: "https://app.deriv.com/derivgo",
-    icon: "📱",
-    description: "Trade on-the-go with our mobile-optimized platform",
-  },
-};
-
 const features = [
+  {
+    icon: BarChart3,
+    title: "Direct Trading",
+    description: "Trade directly on this platform with real-time charts and instant execution",
+  },
   {
     icon: Bot,
     title: "Automated Trading Bots",
-    description: "Access pre-built trading bots or create your own automated strategies",
+    description: "Run pre-built trading bots or create your own automated strategies",
   },
   {
     icon: TrendingUp,
@@ -60,18 +38,21 @@ const features = [
   {
     icon: Shield,
     title: "Secure & Regulated",
-    description: "Trade with confidence on a secure, regulated platform",
+    description: "Trade with confidence on a secure, Deriv-powered platform",
   },
   {
     icon: Zap,
     title: "Fast Execution",
     description: "Lightning-fast trade execution with minimal slippage",
   },
+  {
+    icon: Users,
+    title: "Community Bots",
+    description: "Access and share trading bots with the community",
+  },
 ];
 
 export function SiteLanding({ site, onAuthSuccess }: SiteLandingProps) {
-  const apps = site.apps || [];
-
   return (
     <div 
       className="min-h-screen"
@@ -115,7 +96,15 @@ export function SiteLanding({ site, onAuthSuccess }: SiteLandingProps) {
       {/* Hero Section */}
       <section className="py-20 px-6">
         <div className="max-w-4xl mx-auto text-center space-y-6">
-          <h2 className="text-4xl md:text-5xl font-bold leading-tight">
+          <div 
+            className="inline-block px-4 py-2 rounded-full text-sm font-medium mb-4"
+            style={{ 
+              backgroundColor: site.dark_mode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+            }}
+          >
+            🚀 Powered by Deriv
+          </div>
+          <h2 className="text-4xl md:text-6xl font-bold leading-tight">
             Trade Smarter with{" "}
             <span style={{ color: site.primary_color }}>{site.name}</span>
           </h2>
@@ -135,34 +124,56 @@ export function SiteLanding({ site, onAuthSuccess }: SiteLandingProps) {
             <Button
               size="lg"
               variant="outline"
-              onClick={() => document.getElementById('platforms')?.scrollIntoView({ behavior: 'smooth' })}
+              onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
               style={{ 
                 borderColor: site.primary_color,
                 color: site.primary_color,
               }}
             >
-              Explore Platforms
+              Learn More
             </Button>
+          </div>
+
+          {/* Stats */}
+          <div 
+            className="grid grid-cols-3 gap-8 max-w-xl mx-auto mt-12 pt-8 border-t"
+            style={{ borderColor: site.dark_mode ? '#333' : '#eee' }}
+          >
+            <div>
+              <p className="text-3xl font-bold" style={{ color: site.primary_color }}>24/7</p>
+              <p className="text-sm opacity-60">Trading</p>
+            </div>
+            <div>
+              <p className="text-3xl font-bold" style={{ color: site.primary_color }}>100+</p>
+              <p className="text-sm opacity-60">Assets</p>
+            </div>
+            <div>
+              <p className="text-3xl font-bold" style={{ color: site.primary_color }}>Fast</p>
+              <p className="text-sm opacity-60">Execution</p>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="py-16 px-6">
+      <section id="features" className="py-16 px-6">
         <div className="max-w-6xl mx-auto">
-          <h3 className="text-2xl font-bold text-center mb-10">Why Trade With Us</h3>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <h3 className="text-3xl font-bold text-center mb-4">Everything You Need</h3>
+          <p className="text-center opacity-70 mb-12 max-w-2xl mx-auto">
+            Access professional trading tools, automated bots, and AI-powered signals all in one place
+          </p>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((feature, index) => (
               <div
                 key={index}
-                className="p-6 rounded-xl border text-center"
+                className="p-6 rounded-xl border transition-all hover:scale-[1.02]"
                 style={{
                   borderColor: site.dark_mode ? '#333' : '#ddd',
                   backgroundColor: site.dark_mode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.01)',
                 }}
               >
                 <feature.icon 
-                  className="w-10 h-10 mx-auto mb-4" 
+                  className="w-10 h-10 mb-4" 
                   style={{ color: site.primary_color }}
                 />
                 <h4 className="font-semibold text-lg mb-2">{feature.title}</h4>
@@ -173,55 +184,40 @@ export function SiteLanding({ site, onAuthSuccess }: SiteLandingProps) {
         </div>
       </section>
 
-      {/* Trading Platforms Section */}
-      {apps.length > 0 && (
-        <section id="platforms" className="py-16 px-6">
-          <div className="max-w-6xl mx-auto">
-            <h3 className="text-2xl font-bold text-center mb-4">Trading Platforms</h3>
-            <p className="text-center opacity-70 mb-10 max-w-2xl mx-auto">
-              Access world-class trading platforms powered by Deriv
-            </p>
-            <div className="grid md:grid-cols-2 gap-6">
-              {apps.map((appId) => {
-                const app = derivAppUrls[appId];
-                if (!app) return null;
-                return (
-                  <a
-                    key={appId}
-                    href={app.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-6 rounded-xl border transition-all hover:scale-[1.02] hover:shadow-lg flex items-start gap-4"
-                    style={{
-                      borderColor: site.dark_mode ? '#333' : '#ddd',
-                      backgroundColor: site.dark_mode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
-                    }}
-                  >
-                    <div className="text-4xl">{app.icon}</div>
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-lg flex items-center gap-2">
-                        {app.name}
-                        <ExternalLink className="w-4 h-4 opacity-40" />
-                      </h4>
-                      <p className="text-sm opacity-70 mt-1">{app.description}</p>
-                    </div>
-                  </a>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* CTA Section */}
+      {/* How It Works */}
       <section 
         className="py-16 px-6"
-        style={{ backgroundColor: site.dark_mode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}
+        style={{ backgroundColor: site.dark_mode ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' }}
       >
+        <div className="max-w-4xl mx-auto">
+          <h3 className="text-3xl font-bold text-center mb-12">Get Started in 3 Steps</h3>
+          <div className="grid md:grid-cols-3 gap-8">
+            {[
+              { step: "1", title: "Sign Up", desc: "Connect your existing Deriv account or create a new one" },
+              { step: "2", title: "Choose Tools", desc: "Select from trading, bots, or AI signals" },
+              { step: "3", title: "Start Trading", desc: "Execute trades directly on this platform" },
+            ].map((item) => (
+              <div key={item.step} className="text-center">
+                <div 
+                  className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-xl mx-auto mb-4"
+                  style={{ backgroundColor: site.primary_color }}
+                >
+                  {item.step}
+                </div>
+                <h4 className="font-semibold text-lg mb-2">{item.title}</h4>
+                <p className="text-sm opacity-70">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-16 px-6">
         <div className="max-w-4xl mx-auto text-center space-y-6">
           <h3 className="text-3xl font-bold">Ready to Start Trading?</h3>
           <p className="text-lg opacity-70">
-            Connect your Deriv account and access all our trading tools instantly
+            Connect your Deriv account and access all trading tools instantly
           </p>
           <DerivAuthButton
             siteId={site.id}
