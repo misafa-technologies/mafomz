@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import {
   LayoutGrid,
   Globe,
@@ -115,6 +116,22 @@ export function Sidebar() {
   const navigate = useNavigate();
   const { signOut, isAdmin, isModerator, user } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [platformName, setPlatformName] = useState("Trading Platform");
+
+  useEffect(() => {
+    const fetchPlatformName = async () => {
+      const { data } = await supabase
+        .from('platform_settings')
+        .select('setting_value')
+        .eq('setting_key', 'platform_name')
+        .single();
+      
+      if (data?.setting_value) {
+        setPlatformName(data.setting_value);
+      }
+    };
+    fetchPlatformName();
+  }, []);
 
   const handleSignOut = async () => {
     await signOut();
@@ -135,7 +152,7 @@ export function Sidebar() {
         </div>
         {!isCollapsed && (
           <div className="flex flex-col">
-            <span className="text-lg font-bold text-foreground">Mafomz</span>
+            <span className="text-lg font-bold text-foreground">{platformName}</span>
             <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
               Trading Platform Builder
             </span>
@@ -192,7 +209,7 @@ export function Sidebar() {
       {!isCollapsed && (
         <div className="border-t border-sidebar-border p-4">
           <p className="text-center text-[10px] text-muted-foreground/50">
-            © 2025 Mafomz
+            © {new Date().getFullYear()} {platformName}
           </p>
         </div>
       )}
