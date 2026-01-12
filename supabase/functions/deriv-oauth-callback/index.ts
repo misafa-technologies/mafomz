@@ -77,18 +77,23 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get platform app_id if not provided
-    let derivAppId = appId || '1089';
-    if (!appId) {
-      const { data: appIdSetting } = await supabase
+    // Get platform app_id - MUST be configured
+    let derivAppId = appId;
+    if (!derivAppId) {
+      const { data: appIdSetting, error: settingsError } = await supabase
         .from('platform_settings')
         .select('setting_value')
         .eq('setting_key', 'deriv_app_id')
         .single();
       
-      if (appIdSetting?.setting_value) {
-        derivAppId = appIdSetting.setting_value;
+      if (settingsError || !appIdSetting?.setting_value) {
+        console.error('Deriv App ID not configured:', settingsError);
+        return new Response(
+          JSON.stringify({ error: 'Platform Deriv App ID not configured. Contact administrator.' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
+      derivAppId = appIdSetting.setting_value;
     }
 
     console.log('Validating Deriv token for site:', siteId, 'with app_id:', derivAppId);

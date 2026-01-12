@@ -9,18 +9,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, Save, Loader2, Globe, FileText, Image, Mail, Phone, DollarSign } from "lucide-react";
+import { Settings, Save, Loader2, Globe, FileText, Image, Mail, Phone, Key, ExternalLink } from "lucide-react";
 import { RoleManagement } from "@/components/admin/RoleManagement";
-import { MpesaGlobalConfig } from "@/components/admin/MpesaGlobalConfig";
 import { CommissionSplitConfig } from "@/components/admin/CommissionSplitConfig";
 
 interface PlatformSettings {
   platform_name: string;
   platform_description: string;
-  platform_domain: string;
   favicon_url: string;
   contact_email: string;
   contact_phone: string;
+  deriv_app_id: string;
 }
 
 const AdminSettings = () => {
@@ -31,10 +30,10 @@ const AdminSettings = () => {
   const [settings, setSettings] = useState<PlatformSettings>({
     platform_name: "",
     platform_description: "",
-    platform_domain: "",
     favicon_url: "",
     contact_email: "",
     contact_phone: "",
+    deriv_app_id: "",
   });
 
   useEffect(() => {
@@ -52,10 +51,10 @@ const AdminSettings = () => {
       const settingsMap: PlatformSettings = {
         platform_name: "",
         platform_description: "",
-        platform_domain: "",
         favicon_url: "",
         contact_email: "",
         contact_phone: "",
+        deriv_app_id: "",
       };
 
       data?.forEach((item) => {
@@ -145,17 +144,91 @@ const AdminSettings = () => {
             Admin Settings
           </h1>
           <p className="text-muted-foreground mt-1">
-            Configure platform-wide settings, payments, and user roles
+            Configure platform-wide settings, Deriv integration, and user roles
           </p>
         </div>
 
-        <Tabs defaultValue="branding" className="space-y-6">
+        <Tabs defaultValue="deriv" className="space-y-6">
           <TabsList className="glass">
+            <TabsTrigger value="deriv">Deriv API</TabsTrigger>
             <TabsTrigger value="branding">Branding</TabsTrigger>
             <TabsTrigger value="commissions">Commissions</TabsTrigger>
-            <TabsTrigger value="payments">Payments</TabsTrigger>
             <TabsTrigger value="roles">User Roles</TabsTrigger>
           </TabsList>
+
+          {/* Deriv API Tab */}
+          <TabsContent value="deriv">
+            <Card className="glass border-border">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Key className="w-5 h-5 text-primary" />
+                  Deriv API Configuration
+                </CardTitle>
+                <CardDescription>
+                  Configure your Deriv App ID for OAuth authentication. This is required for site visitors to sign in.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
+                  <h4 className="font-medium text-foreground mb-2">Important Setup Steps</h4>
+                  <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
+                    <li>Go to <a href="https://app.deriv.com/account/api-token" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">Deriv API Management <ExternalLink className="w-3 h-3" /></a></li>
+                    <li>Create a new application with OAuth redirect URL set to your domain</li>
+                    <li>Copy the App ID and paste it below</li>
+                    <li>Ensure "Read" and "Trade" scopes are enabled</li>
+                  </ol>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="deriv_app_id" className="flex items-center gap-2">
+                    <Key className="w-4 h-4" />
+                    Deriv App ID
+                  </Label>
+                  <Input
+                    id="deriv_app_id"
+                    value={settings.deriv_app_id}
+                    onChange={(e) => setSettings({ ...settings, deriv_app_id: e.target.value })}
+                    placeholder="e.g., 12345"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Get your App ID from <a href="https://app.deriv.com/account/api-token" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Deriv API Management</a>
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-lg bg-muted/50 border border-border">
+                  <h4 className="font-medium text-foreground mb-2">OAuth Redirect URL</h4>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    When creating your Deriv app, use this as the OAuth redirect URL:
+                  </p>
+                  <code className="block p-2 bg-background rounded text-sm font-mono break-all">
+                    {window.location.origin}
+                  </code>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    The system automatically handles OAuth callbacks on any path.
+                  </p>
+                </div>
+
+                <Button 
+                  onClick={handleSave} 
+                  disabled={isSaving}
+                  variant="gradient"
+                  className="gap-2"
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      Save Deriv Settings
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           {/* Branding Tab */}
           <TabsContent value="branding">
@@ -166,39 +239,21 @@ const AdminSettings = () => {
                   Platform Branding & Contact
                 </CardTitle>
                 <CardDescription>
-                  Update the platform name, domain, and contact information
+                  Update the platform name and contact information
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="platform_name" className="flex items-center gap-2">
-                      <FileText className="w-4 h-4" />
-                      Platform Name
-                    </Label>
-                    <Input
-                      id="platform_name"
-                      value={settings.platform_name}
-                      onChange={(e) => setSettings({ ...settings, platform_name: e.target.value })}
-                      placeholder="Enter platform name"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="platform_domain" className="flex items-center gap-2">
-                      <Globe className="w-4 h-4" />
-                      Platform Domain
-                    </Label>
-                    <Input
-                      id="platform_domain"
-                      value={settings.platform_domain}
-                      onChange={(e) => setSettings({ ...settings, platform_domain: e.target.value })}
-                      placeholder="e.g., mafomz.io"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      User site subdomains will be: sitename.{settings.platform_domain || "yourdomain.com"}
-                    </p>
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="platform_name" className="flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    Platform Name
+                  </Label>
+                  <Input
+                    id="platform_name"
+                    value={settings.platform_name}
+                    onChange={(e) => setSettings({ ...settings, platform_name: e.target.value })}
+                    placeholder="Enter platform name"
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -292,11 +347,6 @@ const AdminSettings = () => {
           {/* Commissions Tab */}
           <TabsContent value="commissions">
             <CommissionSplitConfig />
-          </TabsContent>
-
-          {/* Payments Tab */}
-          <TabsContent value="payments">
-            <MpesaGlobalConfig />
           </TabsContent>
 
           {/* Roles Tab */}

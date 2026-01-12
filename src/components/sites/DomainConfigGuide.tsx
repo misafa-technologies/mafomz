@@ -24,21 +24,26 @@ export function DomainConfigGuide({ subdomain, customDomain }: DomainConfigGuide
 
   const siteUrl = getSiteUrl(subdomain);
   
-  // Platform nameservers for full domain delegation
+  // Get the current platform domain for DNS configuration
+  const platformHost = window.location.hostname;
+  
+  // Platform nameservers - dynamically derived from current domain
+  const baseDomain = platformHost.split('.').slice(-2).join('.');
   const nameservers = [
-    "ns1.mafomz.com",
-    "ns2.mafomz.com",
+    `ns1.${baseDomain}`,
+    `ns2.${baseDomain}`,
   ];
 
   // Alternative: A records for users who prefer DNS configuration
-  const serverIP = "185.158.133.1";
-  const serverIPv6 = "2a06:98c1:3120::3";
+  // These should be configured in your DNS provider for your platform
+  const serverIP = "76.76.21.21"; // Vercel's IP
+  const serverIPv6 = "2606:4700:3030::6815:0"; // Cloudflare's IPv6
 
   const dnsRecords = customDomain ? [
     { type: "A", name: "@", value: serverIP, description: "Root domain to server" },
     { type: "AAAA", name: "@", value: serverIPv6, description: "IPv6 (optional)" },
-    { type: "CNAME", name: "www", value: customDomain, description: "WWW redirect" },
-    { type: "TXT", name: "_mafomz", value: `verify=${subdomain}`, description: "Domain verification" },
+    { type: "CNAME", name: "www", value: platformHost, description: "WWW redirect to platform" },
+    { type: "TXT", name: "_platform-verify", value: `site=${subdomain}`, description: "Domain verification" },
   ] : [];
 
   return (

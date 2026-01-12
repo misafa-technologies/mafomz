@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { usePlatformDomain } from "@/hooks/usePlatformDomain";
 
 interface SiteCardProps {
   site: {
@@ -48,7 +49,8 @@ const statusConfig = {
 
 export function SiteCard({ site, onDelete }: SiteCardProps) {
   const status = statusConfig[site.status];
-  const siteUrl = `https://${site.subdomain}.mafomz.io`;
+  const { getSiteUrl } = usePlatformDomain();
+  const siteUrl = getSiteUrl(site.subdomain);
 
   return (
     <div className="group glass glass-hover rounded-xl p-6 transition-all duration-300">
@@ -64,8 +66,8 @@ export function SiteCard({ site, onDelete }: SiteCardProps) {
           </div>
           <div>
             <h3 className="font-semibold text-foreground">{site.name}</h3>
-            <p className="text-sm text-muted-foreground">
-              {site.subdomain}.mafomz.io
+            <p className="text-sm text-muted-foreground font-mono truncate max-w-[200px]">
+              {siteUrl.replace(/^https?:\/\//, '')}
             </p>
           </div>
         </div>

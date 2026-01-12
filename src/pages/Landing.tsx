@@ -23,7 +23,7 @@ interface PlatformSettings {
 
 const Landing = () => {
   const [settings, setSettings] = useState<PlatformSettings>({
-    platform_name: "Mafomz",
+    platform_name: "",
     platform_description: "",
     contact_email: "",
     contact_phone: "",
@@ -40,7 +40,7 @@ const Landing = () => {
 
     if (data) {
       const settingsMap: PlatformSettings = {
-        platform_name: "Mafomz",
+        platform_name: "",
         platform_description: "",
         contact_email: "",
         contact_phone: "",
@@ -54,7 +54,7 @@ const Landing = () => {
     }
   };
 
-  const platformName = settings.platform_name || "Mafomz";
+  const platformName = settings.platform_name || "Trading Platform";
   const features = [
     {
       icon: Globe,
