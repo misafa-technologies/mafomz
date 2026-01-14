@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const DERIV_WS_URL = "wss://ws.derivws.com/websockets/v3";
-const DERIV_APP_ID = "1089";
 
 export interface TickData {
   symbol: string;
@@ -27,12 +27,27 @@ export interface ContractData {
 
 interface UseDerivWebSocketOptions {
   token?: string;
+  appId?: string;
   onTick?: (tick: TickData) => void;
   onProposal?: (proposal: ProposalData) => void;
   onContractUpdate?: (contract: ContractData) => void;
   onError?: (error: string) => void;
   onConnect?: () => void;
   onDisconnect?: () => void;
+  onAuthorize?: (data: AuthorizeData) => void;
+}
+
+export interface AuthorizeData {
+  balance: number;
+  currency: string;
+  loginid: string;
+  fullname: string;
+  email: string;
+  accounts: Array<{
+    loginid: string;
+    currency: string;
+    is_virtual: number;
+  }>;
 }
 
 export function useDerivWebSocket(options: UseDerivWebSocketOptions = {}) {
@@ -40,17 +55,47 @@ export function useDerivWebSocket(options: UseDerivWebSocketOptions = {}) {
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [balance, setBalance] = useState<number>(0);
   const [currency, setCurrency] = useState<string>("USD");
+  const [appId, setAppId] = useState<string>(options.appId || "");
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const subscriptionsRef = useRef<Set<string>>(new Set());
+  const proposalCallbacksRef = useRef<Map<string, (proposal: ProposalData) => void>>(new Map());
+
+  // Fetch app ID from platform settings if not provided
+  useEffect(() => {
+    if (!options.appId) {
+      fetchAppId();
+    }
+  }, [options.appId]);
+
+  const fetchAppId = async () => {
+    try {
+      const { data } = await supabase
+        .from("platform_settings")
+        .select("setting_value")
+        .eq("setting_key", "deriv_app_id")
+        .maybeSingle();
+      
+      if (data?.setting_value) {
+        setAppId(data.setting_value);
+      } else {
+        // Default fallback
+        setAppId("1089");
+      }
+    } catch (err) {
+      console.error("Error fetching app ID:", err);
+      setAppId("1089");
+    }
+  };
 
   const connect = useCallback(() => {
+    if (!appId) return;
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
-    const ws = new WebSocket(`${DERIV_WS_URL}?app_id=${DERIV_APP_ID}`);
+    const ws = new WebSocket(`${DERIV_WS_URL}?app_id=${appId}`);
 
     ws.onopen = () => {
-      console.log("Deriv WebSocket connected");
+      console.log("Deriv WebSocket connected with App ID:", appId);
       setIsConnected(true);
       options.onConnect?.();
 
@@ -72,6 +117,16 @@ export function useDerivWebSocket(options: UseDerivWebSocketOptions = {}) {
             setIsAuthorized(true);
             setBalance(data.authorize.balance);
             setCurrency(data.authorize.currency);
+            
+            options.onAuthorize?.({
+              balance: data.authorize.balance,
+              currency: data.authorize.currency,
+              loginid: data.authorize.loginid,
+              fullname: data.authorize.fullname,
+              email: data.authorize.email,
+              accounts: data.authorize.account_list || [],
+            });
+            
             // Subscribe to balance updates
             ws.send(JSON.stringify({ balance: 1, subscribe: 1 }));
           }
@@ -96,19 +151,36 @@ export function useDerivWebSocket(options: UseDerivWebSocketOptions = {}) {
 
         case "proposal":
           if (data.proposal) {
-            options.onProposal?.({
+            const proposalData: ProposalData = {
               id: data.proposal.id,
               ask_price: data.proposal.ask_price,
               payout: data.proposal.payout,
               spot: data.proposal.spot,
               spot_time: data.proposal.spot_time,
-            });
+            };
+            options.onProposal?.(proposalData);
+            
+            // Check for registered callback
+            const reqId = data.req_id?.toString();
+            if (reqId && proposalCallbacksRef.current.has(reqId)) {
+              proposalCallbacksRef.current.get(reqId)?.(proposalData);
+              proposalCallbacksRef.current.delete(reqId);
+            }
+          } else if (data.error) {
+            options.onError?.(data.error.message);
           }
           break;
 
         case "buy":
           if (data.error) {
             options.onError?.(data.error.message);
+          } else if (data.buy) {
+            // Subscribe to contract updates
+            ws.send(JSON.stringify({ 
+              proposal_open_contract: 1, 
+              contract_id: data.buy.contract_id,
+              subscribe: 1 
+            }));
           }
           break;
 
@@ -125,6 +197,12 @@ export function useDerivWebSocket(options: UseDerivWebSocketOptions = {}) {
           }
           break;
 
+        case "sell":
+          if (data.error) {
+            options.onError?.(data.error.message);
+          }
+          break;
+
         case "error":
           options.onError?.(data.error?.message || "Unknown error");
           break;
@@ -137,7 +215,7 @@ export function useDerivWebSocket(options: UseDerivWebSocketOptions = {}) {
       setIsAuthorized(false);
       options.onDisconnect?.();
 
-      // Attempt reconnect
+      // Attempt reconnect after 3 seconds
       reconnectTimeoutRef.current = setTimeout(() => {
         connect();
       }, 3000);
@@ -149,7 +227,7 @@ export function useDerivWebSocket(options: UseDerivWebSocketOptions = {}) {
     };
 
     wsRef.current = ws;
-  }, [options.token]);
+  }, [appId, options.token]);
 
   const disconnect = useCallback(() => {
     if (reconnectTimeoutRef.current) {
@@ -180,7 +258,7 @@ export function useDerivWebSocket(options: UseDerivWebSocketOptions = {}) {
     symbol: string;
     contract_type: "CALL" | "PUT";
     duration: number;
-    duration_unit: "s" | "m" | "h" | "d";
+    duration_unit: "s" | "m" | "h" | "d" | "t";
     amount: number;
     basis: "stake" | "payout";
   }) => {
@@ -193,6 +271,48 @@ export function useDerivWebSocket(options: UseDerivWebSocketOptions = {}) {
       duration: params.duration,
       duration_unit: params.duration_unit,
       symbol: params.symbol,
+    });
+  }, [send, currency]);
+
+  const getProposalAsync = useCallback((params: {
+    symbol: string;
+    contract_type: "CALL" | "PUT" | "DIGITEVEN" | "DIGITODD" | "DIGITOVER" | "DIGITUNDER";
+    duration: number;
+    duration_unit: "s" | "m" | "h" | "d" | "t";
+    amount: number;
+    basis: "stake" | "payout";
+    barrier?: number;
+  }): Promise<ProposalData> => {
+    return new Promise((resolve, reject) => {
+      const reqId = Date.now().toString();
+      
+      proposalCallbacksRef.current.set(reqId, resolve);
+      
+      // Timeout after 10 seconds
+      setTimeout(() => {
+        if (proposalCallbacksRef.current.has(reqId)) {
+          proposalCallbacksRef.current.delete(reqId);
+          reject(new Error("Proposal timeout"));
+        }
+      }, 10000);
+
+      const message: Record<string, unknown> = {
+        proposal: 1,
+        req_id: parseInt(reqId),
+        amount: params.amount,
+        basis: params.basis,
+        contract_type: params.contract_type,
+        currency: currency,
+        duration: params.duration,
+        duration_unit: params.duration_unit,
+        symbol: params.symbol,
+      };
+
+      if (params.barrier !== undefined) {
+        message.barrier = params.barrier;
+      }
+
+      send(message);
     });
   }, [send, currency]);
 
@@ -210,20 +330,25 @@ export function useDerivWebSocket(options: UseDerivWebSocketOptions = {}) {
     });
   }, [send]);
 
+  // Connect when app ID is available
   useEffect(() => {
-    connect();
+    if (appId) {
+      connect();
+    }
     return () => disconnect();
-  }, [options.token]);
+  }, [appId, options.token]);
 
   return {
     isConnected,
     isAuthorized,
     balance,
     currency,
+    appId,
     send,
     subscribeTicks,
     unsubscribeTicks,
     getProposal,
+    getProposalAsync,
     buyContract,
     sellContract,
     disconnect,

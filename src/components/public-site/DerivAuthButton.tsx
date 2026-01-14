@@ -20,6 +20,7 @@ export interface SiteUser {
   balance: number;
   currency: string;
   accounts: Array<{ loginid: string; currency: string }>;
+  token?: string;
 }
 
 const OAUTH_STATE_KEY = "deriv_oauth_state";
