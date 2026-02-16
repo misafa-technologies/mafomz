@@ -5,9 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TrendingUp, TrendingDown, Loader2, RefreshCw, Wifi, WifiOff } from "lucide-react";
 import { useDerivWebSocket, TickData, ProposalData } from "@/hooks/useDerivWebSocket";
+import { PriceChart } from "@/components/trading/PriceChart";
 import { toast } from "sonner";
 
 interface TradingPanelProps {
@@ -149,8 +149,19 @@ export function TradingPanel({ userToken, primaryColor, darkMode }: TradingPanel
     ? priceHistory[priceHistory.length - 1] - priceHistory[priceHistory.length - 2]
     : 0;
 
-  return (
-    <Card style={cardStyle}>
+    return (
+      <div className="space-y-4">
+        {/* Price Chart */}
+        <PriceChart
+          asset={selectedAsset}
+          assetLabel={ASSETS.find(a => a.value === selectedAsset)?.label || selectedAsset}
+          prices={priceHistory}
+          currentPrice={currentPrice}
+          darkMode={darkMode}
+          primaryColor={primaryColor}
+        />
+        
+        <Card style={cardStyle}>
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
@@ -297,6 +308,7 @@ export function TradingPanel({ userToken, primaryColor, darkMode }: TradingPanel
           </p>
         )}
       </CardContent>
-    </Card>
+      </Card>
+    </div>
   );
 }
