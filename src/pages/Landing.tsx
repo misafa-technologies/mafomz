@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -11,7 +11,8 @@ import {
   BarChart3,
   ChevronRight,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  Loader2
 } from "lucide-react";
 
 interface PlatformSettings {
@@ -28,10 +29,51 @@ const Landing = () => {
     contact_email: "",
     contact_phone: "",
   });
+  const [searchParams] = useSearchParams();
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   useEffect(() => {
     fetchSettings();
+    // Check if this is a Deriv OAuth callback landing on root
+    handleOAuthRedirect();
   }, []);
+
+  const handleOAuthRedirect = () => {
+    const token1 = searchParams.get('token1');
+    const acct1 = searchParams.get('acct1');
+    
+    if (token1 && acct1) {
+      // This is a Deriv OAuth callback - find the site and redirect
+      setIsRedirecting(true);
+      const storedSiteKey = localStorage.getItem('deriv_oauth_site');
+      const storedSlug = localStorage.getItem('deriv_oauth_slug');
+      
+      if (storedSlug) {
+        // Redirect to the site page with all query params preserved
+        window.location.href = `/s/${storedSlug}?${searchParams.toString()}`;
+        return;
+      }
+      
+      // If no stored slug, try to find it from the site ID
+      if (storedSiteKey) {
+        supabase
+          .from('sites')
+          .select('subdomain')
+          .eq('id', storedSiteKey)
+          .single()
+          .then(({ data, error: queryError }) => {
+            if (data?.subdomain && !queryError) {
+              window.location.href = `/s/${data.subdomain}?${searchParams.toString()}`;
+            } else {
+              setIsRedirecting(false);
+            }
+          });
+        return;
+      }
+      
+      setIsRedirecting(false);
+    }
+  };
 
   const fetchSettings = async () => {
     const { data } = await supabase
@@ -53,6 +95,17 @@ const Landing = () => {
       setSettings(settingsMap);
     }
   };
+
+  if (isRedirecting) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
+          <p className="text-muted-foreground">Completing sign in...</p>
+        </div>
+      </div>
+    );
+  }
 
   const platformName = settings.platform_name || "Trading Platform";
   const features = [

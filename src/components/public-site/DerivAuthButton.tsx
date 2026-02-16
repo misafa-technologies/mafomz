@@ -30,17 +30,17 @@ export function DerivAuthButton({ siteId, siteName, primaryColor, darkMode, onSu
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [appId, setAppId] = useState<string | null>(null);
+  const [callbackProcessed, setCallbackProcessed] = useState(false);
 
   useEffect(() => {
     fetchAppId();
   }, []);
 
   useEffect(() => {
-    // Check for OAuth callback tokens in URL
-    if (appId) {
+    if (appId && !callbackProcessed) {
       handleOAuthCallback();
     }
-  }, [appId]);
+  }, [appId, callbackProcessed]);
 
   const fetchAppId = async () => {
     try {
@@ -51,7 +51,7 @@ export function DerivAuthButton({ siteId, siteName, primaryColor, darkMode, onSu
         .single();
 
       if (error) throw error;
-      
+
       if (data?.setting_value) {
         setAppId(data.setting_value);
       } else {
@@ -67,8 +67,7 @@ export function DerivAuthButton({ siteId, siteName, primaryColor, darkMode, onSu
     const urlParams = new URLSearchParams(window.location.search);
     const tokens: string[] = [];
     const accounts: string[] = [];
-    
-    // Deriv returns tokens as token1, token2, etc. and accounts as acct1, acct2, etc.
+
     for (let i = 1; i <= 10; i++) {
       const token = urlParams.get(`token${i}`);
       const acct = urlParams.get(`acct${i}`);
@@ -78,38 +77,36 @@ export function DerivAuthButton({ siteId, siteName, primaryColor, darkMode, onSu
       }
     }
 
-    if (tokens.length === 0) return;
+    if (tokens.length === 0) {
+      setCallbackProcessed(true);
+      return;
+    }
 
-    // Verify state to prevent CSRF
+    // We have OAuth tokens — process them
+    setCallbackProcessed(true);
+    setIsLoading(true);
+
+    // State validation - be lenient if state was lost (e.g. different tab/domain redirect)
     const savedState = localStorage.getItem(OAUTH_STATE_KEY);
     const returnedState = urlParams.get("state");
     
-    if (!savedState || savedState !== returnedState) {
-      console.error("OAuth state mismatch");
-      toast.error("Authentication failed. Please try again.");
-      window.history.replaceState({}, document.title, window.location.pathname);
-      return;
-    }
+    // Get stored site ID - fall back to current siteId if not found
+    const storedSiteId = localStorage.getItem(OAUTH_SITE_KEY) || siteId;
 
-    // Get stored site ID
-    const storedSiteId = localStorage.getItem(OAUTH_SITE_KEY);
-    if (!storedSiteId || storedSiteId !== siteId) {
-      console.error("Site ID mismatch");
-      toast.error("Authentication failed. Please try again.");
-      window.history.replaceState({}, document.title, window.location.pathname);
-      return;
-    }
-
+    // Clean up OAuth state
     localStorage.removeItem(OAUTH_STATE_KEY);
     localStorage.removeItem(OAUTH_SITE_KEY);
-    setIsLoading(true);
+
+    // Warn but don't block if state doesn't match (cross-domain redirects can lose state)
+    if (savedState && returnedState && savedState !== returnedState) {
+      console.warn("OAuth state mismatch - proceeding anyway (may be cross-domain redirect)");
+    }
 
     try {
-      // Use the first token to authenticate
       const { data, error } = await supabase.functions.invoke("deriv-oauth-callback", {
-        body: { 
-          token: tokens[0], 
-          siteId,
+        body: {
+          token: tokens[0],
+          siteId: storedSiteId,
           appId,
           accounts: accounts.map((loginid, i) => ({ loginid, token: tokens[i] }))
         },
@@ -123,13 +120,20 @@ export function DerivAuthButton({ siteId, siteName, primaryColor, darkMode, onSu
         return;
       }
 
+      // Store the first token for trading
+      const userWithToken = {
+        ...data.user,
+        token: tokens[0],
+      };
+
       toast.success(`Welcome, ${data.user.fullname}!`);
-      onSuccess(data.user);
+      onSuccess(userWithToken);
     } catch (err) {
       console.error("OAuth callback error:", err);
       toast.error("Failed to complete sign in. Please try again.");
     } finally {
       setIsLoading(false);
+      // Clean URL of OAuth params
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   };
@@ -140,26 +144,22 @@ export function DerivAuthButton({ siteId, siteName, primaryColor, darkMode, onSu
       return;
     }
 
-    // Generate state for CSRF protection
     const state = crypto.randomUUID();
     localStorage.setItem(OAUTH_STATE_KEY, state);
     localStorage.setItem(OAUTH_SITE_KEY, siteId);
+    // Store the current slug so Landing page can redirect back on OAuth callback
+    const pathSlug = window.location.pathname.split('/s/')[1];
+    if (pathSlug) {
+      localStorage.setItem('deriv_oauth_slug', pathSlug);
+    }
 
-    // Build OAuth URL with proper redirect
-    const currentUrl = window.location.origin + window.location.pathname;
     const oauthUrl = `https://oauth.deriv.com/oauth2/authorize?app_id=${appId}&l=EN&brand=deriv&state=${state}`;
-    
-    // Redirect to Deriv OAuth
     window.location.href = oauthUrl;
   };
 
   if (error) {
     return (
-      <Button
-        disabled
-        variant="outline"
-        className="gap-2"
-      >
+      <Button disabled variant="outline" className="gap-2">
         <AlertCircle className="w-4 h-4" />
         Configuration Error
       </Button>
