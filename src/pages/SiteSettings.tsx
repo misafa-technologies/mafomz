@@ -13,6 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DomainConfigGuide } from "@/components/sites/DomainConfigGuide";
+import { DomainManager } from "@/components/sites/DomainManager";
+import { BotManager } from "@/components/sites/BotManager";
 import { 
   Settings, 
   Save, 
@@ -22,7 +24,8 @@ import {
   Image,
   ArrowLeft,
   Trash2,
-  Server
+  Server,
+  Bot
 } from "lucide-react";
 import {
   AlertDialog,
@@ -209,6 +212,9 @@ const SiteSettings = () => {
             <TabsTrigger value="basic">Basic Info</TabsTrigger>
             <TabsTrigger value="domain">Domain</TabsTrigger>
             <TabsTrigger value="branding">Branding</TabsTrigger>
+            <TabsTrigger value="bots" className="gap-1">
+              <Bot className="w-4 h-4" /> Bots
+            </TabsTrigger>
           </TabsList>
 
           {/* Basic Info Tab */}
@@ -278,11 +284,22 @@ const SiteSettings = () => {
           </TabsContent>
 
           {/* Domain Tab */}
-          <TabsContent value="domain">
+          <TabsContent value="domain" className="space-y-6">
+            <DomainManager 
+              siteId={site.id}
+              subdomain={site.subdomain}
+              customDomain={site.custom_domain}
+              onDomainChange={(domain) => setSite({ ...site, custom_domain: domain })}
+            />
             <DomainConfigGuide 
               subdomain={site.subdomain} 
               customDomain={site.custom_domain} 
             />
+          </TabsContent>
+
+          {/* Bots Tab */}
+          <TabsContent value="bots">
+            <BotManager siteId={site.id} />
           </TabsContent>
 
           {/* Branding Tab */}

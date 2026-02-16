@@ -34,6 +34,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { DerivApiConfig } from "@/components/admin/DerivApiConfig";
 import { 
   Settings, 
   Users, 
@@ -47,12 +48,8 @@ import {
   UserCog,
   DollarSign,
   Activity,
-  Smartphone,
-  CreditCard,
   Bot,
   TrendingUp,
-  Eye,
-  Ban,
   CheckCircle,
   XCircle,
   RefreshCw,
@@ -74,7 +71,6 @@ interface PlatformSettings {
   platform_description: string;
   favicon_url: string;
   mpesa_enabled: string;
-  mpesa_default_environment: string;
   commission_rate: string;
   auto_payout_enabled: string;
   min_payout_amount: string;
@@ -126,7 +122,6 @@ const AdminPanel = () => {
     platform_description: "",
     favicon_url: "",
     mpesa_enabled: "true",
-    mpesa_default_environment: "sandbox",
     commission_rate: "0.10",
     auto_payout_enabled: "false",
     min_payout_amount: "100",
@@ -176,7 +171,6 @@ const AdminPanel = () => {
         platform_description: "",
         favicon_url: "",
         mpesa_enabled: "true",
-        mpesa_default_environment: "sandbox",
         commission_rate: "0.10",
         auto_payout_enabled: "false",
         min_payout_amount: "100",
@@ -576,7 +570,7 @@ const AdminPanel = () => {
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-lg bg-destructive/10 flex items-center justify-center">
-                  <CreditCard className="h-5 w-5 text-destructive" />
+                  <DollarSign className="h-5 w-5 text-destructive" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">${stats.pendingPayouts.toLocaleString()}</p>
@@ -624,9 +618,9 @@ const AdminPanel = () => {
               <DollarSign className="w-4 h-4" />
               Commissions
             </TabsTrigger>
-            <TabsTrigger value="mpesa" className="gap-2">
-              <Smartphone className="w-4 h-4" />
-              M-Pesa
+            <TabsTrigger value="deriv-api" className="gap-2">
+              <TrendingUp className="w-4 h-4" />
+              Deriv API
             </TabsTrigger>
             <TabsTrigger value="announcements" className="gap-2">
               <Bell className="w-4 h-4" />
@@ -806,188 +800,9 @@ const AdminPanel = () => {
             </Card>
           </TabsContent>
 
-          {/* M-Pesa Tab */}
-          <TabsContent value="mpesa">
-            <div className="grid gap-6 lg:grid-cols-2">
-              <Card className="glass border-border">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        <Smartphone className="w-5 h-5 text-success" />
-                        M-Pesa Daraja Configuration
-                      </CardTitle>
-                      <CardDescription>
-                        Configure M-Pesa payment integration for the platform
-                      </CardDescription>
-                    </div>
-                    <Dialog open={showMpesaDialog} onOpenChange={setShowMpesaDialog}>
-                      <DialogTrigger asChild>
-                        <Button variant="gradient" size="sm" className="gap-2">
-                          <Plus className="w-4 h-4" />
-                          Add Config
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="glass border-border max-w-lg">
-                        <DialogHeader>
-                          <DialogTitle>Add M-Pesa Configuration</DialogTitle>
-                          <DialogDescription>
-                            Enter your Safaricom Daraja API credentials
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4 py-4">
-                          <div className="space-y-2">
-                            <Label>Configuration Name</Label>
-                            <Input
-                              value={newMpesaConfig.config_name}
-                              onChange={(e) => setNewMpesaConfig({ ...newMpesaConfig, config_name: e.target.value })}
-                              placeholder="e.g., Production M-Pesa"
-                            />
-                          </div>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label>Consumer Key</Label>
-                              <Input
-                                value={newMpesaConfig.consumer_key}
-                                onChange={(e) => setNewMpesaConfig({ ...newMpesaConfig, consumer_key: e.target.value })}
-                                placeholder="Consumer Key"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Consumer Secret</Label>
-                              <Input
-                                type="password"
-                                value={newMpesaConfig.consumer_secret}
-                                onChange={(e) => setNewMpesaConfig({ ...newMpesaConfig, consumer_secret: e.target.value })}
-                                placeholder="Consumer Secret"
-                              />
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label>Shortcode</Label>
-                              <Input
-                                value={newMpesaConfig.shortcode}
-                                onChange={(e) => setNewMpesaConfig({ ...newMpesaConfig, shortcode: e.target.value })}
-                                placeholder="174379"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Passkey</Label>
-                              <Input
-                                type="password"
-                                value={newMpesaConfig.passkey}
-                                onChange={(e) => setNewMpesaConfig({ ...newMpesaConfig, passkey: e.target.value })}
-                                placeholder="Passkey"
-                              />
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Callback URL (Optional)</Label>
-                            <Input
-                              value={newMpesaConfig.callback_url}
-                              onChange={(e) => setNewMpesaConfig({ ...newMpesaConfig, callback_url: e.target.value })}
-                              placeholder="https://your-callback-url.com"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Environment</Label>
-                            <Select 
-                              value={newMpesaConfig.environment} 
-                              onValueChange={(v) => setNewMpesaConfig({ ...newMpesaConfig, environment: v })}
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="sandbox">Sandbox (Testing)</SelectItem>
-                                <SelectItem value="production">Production (Live)</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        <div className="flex justify-end gap-3">
-                          <Button variant="outline" onClick={() => setShowMpesaDialog(false)}>
-                            Cancel
-                          </Button>
-                          <Button variant="gradient" onClick={handleCreateMpesaConfig}>
-                            Save Configuration
-                          </Button>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {paymentConfigs.length === 0 ? (
-                    <div className="text-center py-8">
-                      <Smartphone className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
-                      <p className="text-muted-foreground">No M-Pesa configurations yet</p>
-                      <p className="text-sm text-muted-foreground">Click "Add Config" to set up M-Pesa payments</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {paymentConfigs.map((config) => (
-                        <div key={config.id} className="flex items-center justify-between p-4 rounded-lg bg-secondary/50 border border-border">
-                          <div className="flex items-center gap-3">
-                            <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${config.is_active ? 'bg-success/20' : 'bg-muted'}`}>
-                              <Smartphone className={`w-5 h-5 ${config.is_active ? 'text-success' : 'text-muted-foreground'}`} />
-                            </div>
-                            <div>
-                              <p className="font-medium">{config.config_name}</p>
-                              <div className="flex gap-2 mt-1">
-                                <Badge variant="secondary" className="text-xs">
-                                  {config.shortcode || "No shortcode"}
-                                </Badge>
-                                <Badge variant={config.environment === "production" ? "default" : "outline"} className="text-xs">
-                                  {config.environment}
-                                </Badge>
-                              </div>
-                            </div>
-                          </div>
-                          <Switch
-                            checked={config.is_active}
-                            onCheckedChange={() => toggleMpesaConfig(config.id, config.is_active)}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card className="glass border-border">
-                <CardHeader>
-                  <CardTitle>M-Pesa Documentation</CardTitle>
-                  <CardDescription>Quick reference for Daraja API integration</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="rounded-lg bg-secondary/50 p-4">
-                    <h4 className="font-semibold mb-2">Getting Started</h4>
-                    <ol className="list-decimal list-inside text-sm text-muted-foreground space-y-1">
-                      <li>Register at developer.safaricom.co.ke</li>
-                      <li>Create an app to get API credentials</li>
-                      <li>Use Sandbox for testing</li>
-                      <li>Apply for production Go-Live</li>
-                    </ol>
-                  </div>
-                  <div className="rounded-lg bg-secondary/50 p-4">
-                    <h4 className="font-semibold mb-2">Supported Features</h4>
-                    <ul className="text-sm text-muted-foreground space-y-1">
-                      <li>✓ STK Push (Lipa Na M-Pesa)</li>
-                      <li>✓ Payment callbacks</li>
-                      <li>✓ Transaction status queries</li>
-                      <li>✓ Reversal requests</li>
-                    </ul>
-                  </div>
-                  <Button variant="outline" className="w-full" asChild>
-                    <a href="https://developer.safaricom.co.ke/Documentation" target="_blank" rel="noopener noreferrer">
-                      Open Safaricom Documentation
-                    </a>
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
+          {/* Deriv API Tab */}
+          <TabsContent value="deriv-api">
+            <DerivApiConfig />
           </TabsContent>
 
           {/* Announcements Tab */}

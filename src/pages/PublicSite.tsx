@@ -50,12 +50,28 @@ export default function PublicSite() {
 
   const fetchSite = async () => {
     try {
-      const { data, error } = await supabase
+      // First try exact match, then try partial match for generated slugs
+      let { data, error } = await supabase
         .from("sites")
         .select("id, name, description, logo_url, primary_color, secondary_color, dark_mode, footer_text, apps, deriv_account_id, status")
         .eq("subdomain", slug)
         .eq("status", "live")
         .maybeSingle();
+
+      // If not found, try finding by slug prefix (for cases where slug was auto-generated)
+      if (!data && !error) {
+        const { data: fuzzyData, error: fuzzyError } = await supabase
+          .from("sites")
+          .select("id, name, description, logo_url, primary_color, secondary_color, dark_mode, footer_text, apps, deriv_account_id, status")
+          .ilike("subdomain", `${slug}%`)
+          .eq("status", "live")
+          .limit(1)
+          .maybeSingle();
+        
+        if (fuzzyError) throw fuzzyError;
+        data = fuzzyData;
+        error = null;
+      }
 
       if (error) throw error;
 

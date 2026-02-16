@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { createChart, IChartApi, ISeriesApi, Time } from "lightweight-charts";
+import { createChart, LineSeries, AreaSeries, CandlestickSeries } from "lightweight-charts";
+import type { IChartApi, ISeriesApi, Time, CandlestickData, LineData, AreaData } from "lightweight-charts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +10,6 @@ import {
   BarChart3, 
   LineChart as LineChartIcon,
   CandlestickChart,
-  RefreshCw,
   Maximize2
 } from "lucide-react";
 
@@ -42,7 +42,6 @@ export function PriceChart({
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
-    // Clear previous chart
     if (chartRef.current) {
       chartRef.current.remove();
     }
@@ -68,44 +67,40 @@ export function PriceChart({
       },
       crosshair: {
         mode: 1,
-        vertLine: {
-          color: primaryColor,
-          width: 1,
-          style: 2,
-        },
-        horzLine: {
-          color: primaryColor,
-          width: 1,
-          style: 2,
-        },
+        vertLine: { color: primaryColor, width: 1, style: 2 },
+        horzLine: { color: primaryColor, width: 1, style: 2 },
       },
     });
 
     chartRef.current = chart;
 
-    // Create series based on chart type - using line series for all types in v5
-    const series = chart.addSeries({
-      type: chartType === "candle" ? 'Candlestick' : chartType === "area" ? 'Area' : 'Line',
-      color: primaryColor,
-      lineWidth: 2,
-      ...(chartType === "candle" && {
+    let series: ISeriesApi<"Line"> | ISeriesApi<"Candlestick"> | ISeriesApi<"Area">;
+
+    if (chartType === "candle") {
+      series = chart.addSeries(CandlestickSeries, {
         upColor: '#22c55e',
         downColor: '#ef4444',
         borderUpColor: '#22c55e',
         borderDownColor: '#ef4444',
         wickUpColor: '#22c55e',
         wickDownColor: '#ef4444',
-      }),
-      ...(chartType === "area" && {
+      });
+    } else if (chartType === "area") {
+      series = chart.addSeries(AreaSeries, {
         lineColor: primaryColor,
         topColor: `${primaryColor}60`,
         bottomColor: `${primaryColor}10`,
-      }),
-    });
+        lineWidth: 2,
+      });
+    } else {
+      series = chart.addSeries(LineSeries, {
+        color: primaryColor,
+        lineWidth: 2,
+      });
+    }
 
-    seriesRef.current = series as ISeriesApi<"Line">;
+    seriesRef.current = series;
 
-    // Handle resize
     const handleResize = () => {
       if (chartContainerRef.current && chartRef.current) {
         chartRef.current.applyOptions({
@@ -130,12 +125,11 @@ export function PriceChart({
     if (!seriesRef.current || prices.length === 0) return;
 
     const now = Date.now();
-    const interval = 1000; // 1 second between points
+    const interval = 1000;
 
     if (chartType === "candle") {
-      // Generate OHLC data from prices
-      const candleData: CandlestickData[] = [];
-      const groupSize = 5; // Group 5 ticks into one candle
+      const candleData: CandlestickData<Time>[] = [];
+      const groupSize = 5;
       
       for (let i = 0; i < prices.length; i += groupSize) {
         const group = prices.slice(i, i + groupSize);
@@ -152,22 +146,19 @@ export function PriceChart({
       
       (seriesRef.current as ISeriesApi<"Candlestick">).setData(candleData);
     } else {
-      // Line or Area data
-      const lineData: LineData[] = prices.map((price, index) => ({
+      const lineData: (LineData<Time> | AreaData<Time>)[] = prices.map((price, index) => ({
         time: ((now - (prices.length - index) * interval) / 1000) as Time,
         value: price,
       }));
       
-      (seriesRef.current as ISeriesApi<"Line"> | ISeriesApi<"Area">).setData(lineData);
+      (seriesRef.current as ISeriesApi<"Line"> | ISeriesApi<"Area">).setData(lineData as any);
     }
 
-    // Fit content
     if (chartRef.current) {
       chartRef.current.timeScale().fitContent();
     }
   }, [prices, chartType]);
 
-  // Calculate price change
   const priceChange = prices.length >= 2 
     ? prices[prices.length - 1] - prices[prices.length - 2]
     : 0;
@@ -236,7 +227,6 @@ export function PriceChart({
           style={{ height: isFullscreen ? '500px' : '280px' }}
         />
         
-        {/* Price Stats */}
         <div className="grid grid-cols-4 gap-4 mt-4 text-center text-sm">
           <div className="p-2 rounded-lg" style={{ backgroundColor: darkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}>
             <p className="text-xs text-muted-foreground">High</p>
