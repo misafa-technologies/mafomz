@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -25,10 +25,12 @@ const SITE_USER_KEY = 'site_user';
 
 export default function PublicSite() {
   const { slug } = useParams<{ slug: string }>();
+  const location = useLocation();
   const [site, setSite] = useState<SiteData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<SiteUser | null>(null);
+  const [resolvedSlug, setResolvedSlug] = useState<string | null>(null);
 
   useEffect(() => {
     if (slug) {
@@ -39,9 +41,22 @@ export default function PublicSite() {
 
   const loadStoredUser = () => {
     try {
+      // Try exact slug first, then try with any suffix pattern
       const stored = localStorage.getItem(`${SITE_USER_KEY}_${slug}`);
       if (stored) {
         setCurrentUser(JSON.parse(stored));
+        return;
+      }
+      // Search localStorage for keys matching this slug prefix
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key?.startsWith(`${SITE_USER_KEY}_${slug}`)) {
+          const data = localStorage.getItem(key);
+          if (data) {
+            setCurrentUser(JSON.parse(data));
+            return;
+          }
+        }
       }
     } catch (err) {
       console.error("Error loading stored user:", err);
@@ -50,44 +65,67 @@ export default function PublicSite() {
 
   const fetchSite = async () => {
     try {
-      // First try exact match, then try partial match for generated slugs
-      let { data, error } = await supabase
+      // 1. Try exact match first
+      let { data, error: exactErr } = await supabase
         .from("sites")
         .select("id, name, description, logo_url, primary_color, secondary_color, dark_mode, footer_text, apps, deriv_account_id, status")
-        .eq("subdomain", slug)
+        .eq("subdomain", slug!)
         .eq("status", "live")
         .maybeSingle();
 
-      // If not found, try finding by slug prefix (for cases where slug was auto-generated)
-      if (!data && !error) {
-        const { data: fuzzyData, error: fuzzyError } = await supabase
+      // 2. If no exact match, try matching where the DB subdomain starts with our slug
+      if (!data && !exactErr) {
+        const { data: prefixData, error: prefixErr } = await supabase
           .from("sites")
-          .select("id, name, description, logo_url, primary_color, secondary_color, dark_mode, footer_text, apps, deriv_account_id, status")
+          .select("id, name, description, logo_url, primary_color, secondary_color, dark_mode, footer_text, apps, deriv_account_id, status, subdomain")
           .ilike("subdomain", `${slug}%`)
           .eq("status", "live")
           .limit(1)
           .maybeSingle();
-        
-        if (fuzzyError) throw fuzzyError;
-        data = fuzzyData;
-        error = null;
+
+        if (prefixErr) throw prefixErr;
+        if (prefixData) {
+          setResolvedSlug(prefixData.subdomain);
+          data = prefixData;
+        }
       }
 
-      if (error) throw error;
+      // 3. If still nothing, try matching where our slug starts with a DB subdomain name
+      if (!data && !exactErr) {
+        // Extract base name (before the suffix like -gkw1)
+        const baseName = slug!.replace(/-[a-z0-9]{4,}$/, '');
+        if (baseName !== slug) {
+          const { data: baseData, error: baseErr } = await supabase
+            .from("sites")
+            .select("id, name, description, logo_url, primary_color, secondary_color, dark_mode, footer_text, apps, deriv_account_id, status, subdomain")
+            .ilike("subdomain", `${baseName}%`)
+            .eq("status", "live")
+            .limit(5);
+
+          if (baseErr) throw baseErr;
+          // Find the best match - exact slug match first, then closest
+          const exactMatch = baseData?.find(s => s.subdomain === slug);
+          const bestMatch = exactMatch || baseData?.[0];
+          if (bestMatch) {
+            setResolvedSlug(bestMatch.subdomain);
+            data = bestMatch;
+          }
+        }
+      }
+
+      if (exactErr) throw exactErr;
 
       if (!data) {
         setError("Site not found or not published");
         return;
       }
 
-      const apps = Array.isArray(data.apps) 
+      const apps = Array.isArray(data.apps)
         ? data.apps.filter((app): app is string => typeof app === 'string')
         : [];
 
-      setSite({
-        ...data,
-        apps,
-      });
+      setSite({ ...data, apps });
+      setResolvedSlug(prev => prev || slug!);
     } catch (err) {
       console.error("Error fetching site:", err);
       setError("Failed to load site");
@@ -98,12 +136,21 @@ export default function PublicSite() {
 
   const handleAuthSuccess = (user: SiteUser) => {
     setCurrentUser(user);
-    localStorage.setItem(`${SITE_USER_KEY}_${slug}`, JSON.stringify(user));
+    const storeKey = resolvedSlug || slug;
+    localStorage.setItem(`${SITE_USER_KEY}_${storeKey}`, JSON.stringify(user));
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
-    localStorage.removeItem(`${SITE_USER_KEY}_${slug}`);
+    const storeKey = resolvedSlug || slug;
+    localStorage.removeItem(`${SITE_USER_KEY}_${storeKey}`);
+    // Also clean up any other matching keys
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(`${SITE_USER_KEY}_${slug}`)) {
+        localStorage.removeItem(key);
+      }
+    }
   };
 
   if (isLoading) {
@@ -129,7 +176,6 @@ export default function PublicSite() {
     );
   }
 
-  // Show dashboard if user is logged in
   if (currentUser) {
     return (
       <div
@@ -138,10 +184,9 @@ export default function PublicSite() {
           minHeight: '100vh',
         }}
       >
-        {/* Header */}
-        <header 
+        <header
           className="border-b py-4 px-6 sticky top-0 z-50 backdrop-blur-lg"
-          style={{ 
+          style={{
             borderColor: site.dark_mode ? '#222' : '#eee',
             background: site.dark_mode ? 'rgba(10,10,10,0.9)' : 'rgba(255,255,255,0.9)',
           }}
@@ -151,7 +196,7 @@ export default function PublicSite() {
               {site.logo_url ? (
                 <img src={site.logo_url} alt={site.name} className="h-10 w-10 rounded-lg object-cover" />
               ) : (
-                <div 
+                <div
                   className="h-10 w-10 rounded-lg flex items-center justify-center text-white font-bold"
                   style={{ backgroundColor: site.primary_color }}
                 >
@@ -176,10 +221,9 @@ export default function PublicSite() {
           onLogout={handleLogout}
         />
 
-        {/* Footer */}
-        <footer 
+        <footer
           className="py-8 px-6 border-t"
-          style={{ 
+          style={{
             borderColor: site.dark_mode ? '#222' : '#eee',
             color: site.dark_mode ? '#fff' : '#000',
           }}
@@ -194,6 +238,5 @@ export default function PublicSite() {
     );
   }
 
-  // Show landing page for non-logged in users
   return <SiteLanding site={site} onAuthSuccess={handleAuthSuccess} />;
 }
