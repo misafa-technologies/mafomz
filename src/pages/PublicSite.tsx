@@ -18,6 +18,7 @@ interface SiteData {
   footer_text: string | null;
   apps: string[];
   deriv_account_id: string | null;
+  deriv_app_id: string | null;
   status: string | null;
 }
 
@@ -66,9 +67,11 @@ export default function PublicSite() {
   const fetchSite = async () => {
     try {
       // 1. Try exact match first
+      const selectFields = "id, name, description, logo_url, primary_color, secondary_color, dark_mode, footer_text, apps, deriv_account_id, deriv_app_id, status";
+      
       let { data, error: exactErr } = await supabase
         .from("sites")
-        .select("id, name, description, logo_url, primary_color, secondary_color, dark_mode, footer_text, apps, deriv_account_id, status")
+        .select(selectFields)
         .eq("subdomain", slug!)
         .eq("status", "live")
         .maybeSingle();
@@ -77,7 +80,7 @@ export default function PublicSite() {
       if (!data && !exactErr) {
         const { data: prefixData, error: prefixErr } = await supabase
           .from("sites")
-          .select("id, name, description, logo_url, primary_color, secondary_color, dark_mode, footer_text, apps, deriv_account_id, status, subdomain")
+          .select(`${selectFields}, subdomain`)
           .ilike("subdomain", `${slug}%`)
           .eq("status", "live")
           .limit(1)
@@ -97,7 +100,7 @@ export default function PublicSite() {
         if (baseName !== slug) {
           const { data: baseData, error: baseErr } = await supabase
             .from("sites")
-            .select("id, name, description, logo_url, primary_color, secondary_color, dark_mode, footer_text, apps, deriv_account_id, status, subdomain")
+            .select(`${selectFields}, subdomain`)
             .ilike("subdomain", `${baseName}%`)
             .eq("status", "live")
             .limit(5);
@@ -238,5 +241,5 @@ export default function PublicSite() {
     );
   }
 
-  return <SiteLanding site={site} onAuthSuccess={handleAuthSuccess} />;
+  return <SiteLanding site={site} onAuthSuccess={handleAuthSuccess} derivAppId={site.deriv_app_id} />;
 }

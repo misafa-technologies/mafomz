@@ -17,6 +17,7 @@ interface SiteData {
 interface SiteLandingProps {
   site: SiteData;
   onAuthSuccess: (user: SiteUser) => void;
+  derivAppId?: string | null;
 }
 
 const features = [
@@ -52,7 +53,7 @@ const features = [
   },
 ];
 
-export function SiteLanding({ site, onAuthSuccess }: SiteLandingProps) {
+export function SiteLanding({ site, onAuthSuccess, derivAppId }: SiteLandingProps) {
   return (
     <div 
       className="min-h-screen"
@@ -88,6 +89,7 @@ export function SiteLanding({ site, onAuthSuccess }: SiteLandingProps) {
             siteName={site.name}
             primaryColor={site.primary_color}
             darkMode={site.dark_mode}
+            siteAppId={derivAppId}
             onSuccess={onAuthSuccess}
           />
         </div>
@@ -119,6 +121,7 @@ export function SiteLanding({ site, onAuthSuccess }: SiteLandingProps) {
               siteName={site.name}
               primaryColor={site.primary_color}
               darkMode={site.dark_mode}
+              siteAppId={derivAppId}
               onSuccess={onAuthSuccess}
             />
             <Button
@@ -224,6 +227,7 @@ export function SiteLanding({ site, onAuthSuccess }: SiteLandingProps) {
             siteName={site.name}
             primaryColor={site.primary_color}
             darkMode={site.dark_mode}
+            siteAppId={derivAppId}
             onSuccess={onAuthSuccess}
           />
         </div>

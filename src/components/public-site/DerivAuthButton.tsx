@@ -9,6 +9,7 @@ interface DerivAuthButtonProps {
   siteName: string;
   primaryColor: string;
   darkMode: boolean;
+  siteAppId?: string | null;
   onSuccess: (user: SiteUser) => void;
 }
 
@@ -26,15 +27,15 @@ export interface SiteUser {
 const OAUTH_STATE_KEY = "deriv_oauth_state";
 const OAUTH_SITE_KEY = "deriv_oauth_site";
 
-export function DerivAuthButton({ siteId, siteName, primaryColor, darkMode, onSuccess }: DerivAuthButtonProps) {
+export function DerivAuthButton({ siteId, siteName, primaryColor, darkMode, siteAppId, onSuccess }: DerivAuthButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [appId, setAppId] = useState<string | null>(null);
   const [callbackProcessed, setCallbackProcessed] = useState(false);
 
   useEffect(() => {
-    fetchAppId();
-  }, []);
+    resolveAppId();
+  }, [siteAppId]);
 
   useEffect(() => {
     if (appId && !callbackProcessed) {
@@ -42,12 +43,18 @@ export function DerivAuthButton({ siteId, siteName, primaryColor, darkMode, onSu
     }
   }, [appId, callbackProcessed]);
 
-  const fetchAppId = async () => {
+  const resolveAppId = async () => {
+    // Priority: creator's own App ID > platform default
+    if (siteAppId) {
+      setAppId(siteAppId);
+      return;
+    }
+
     try {
       const { data, error } = await supabase
-        .from('platform_settings')
-        .select('setting_value')
-        .eq('setting_key', 'deriv_app_id')
+        .from("platform_settings")
+        .select("setting_value")
+        .eq("setting_key", "deriv_app_id")
         .single();
 
       if (error) throw error;
@@ -82,25 +89,14 @@ export function DerivAuthButton({ siteId, siteName, primaryColor, darkMode, onSu
       return;
     }
 
-    // We have OAuth tokens — process them
     setCallbackProcessed(true);
     setIsLoading(true);
 
-    // State validation - be lenient if state was lost (e.g. different tab/domain redirect)
-    const savedState = localStorage.getItem(OAUTH_STATE_KEY);
-    const returnedState = urlParams.get("state");
-    
-    // Get stored site ID - fall back to current siteId if not found
     const storedSiteId = localStorage.getItem(OAUTH_SITE_KEY) || siteId;
 
-    // Clean up OAuth state
     localStorage.removeItem(OAUTH_STATE_KEY);
     localStorage.removeItem(OAUTH_SITE_KEY);
-
-    // Warn but don't block if state doesn't match (cross-domain redirects can lose state)
-    if (savedState && returnedState && savedState !== returnedState) {
-      console.warn("OAuth state mismatch - proceeding anyway (may be cross-domain redirect)");
-    }
+    localStorage.removeItem("deriv_oauth_slug");
 
     try {
       const { data, error } = await supabase.functions.invoke("deriv-oauth-callback", {
@@ -108,7 +104,7 @@ export function DerivAuthButton({ siteId, siteName, primaryColor, darkMode, onSu
           token: tokens[0],
           siteId: storedSiteId,
           appId,
-          accounts: accounts.map((loginid, i) => ({ loginid, token: tokens[i] }))
+          accounts: accounts.map((loginid, i) => ({ loginid, token: tokens[i] })),
         },
       });
 
@@ -120,7 +116,6 @@ export function DerivAuthButton({ siteId, siteName, primaryColor, darkMode, onSu
         return;
       }
 
-      // Store the first token for trading
       const userWithToken = {
         ...data.user,
         token: tokens[0],
@@ -133,7 +128,6 @@ export function DerivAuthButton({ siteId, siteName, primaryColor, darkMode, onSu
       toast.error("Failed to complete sign in. Please try again.");
     } finally {
       setIsLoading(false);
-      // Clean URL of OAuth params
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   };
@@ -147,12 +141,13 @@ export function DerivAuthButton({ siteId, siteName, primaryColor, darkMode, onSu
     const state = crypto.randomUUID();
     localStorage.setItem(OAUTH_STATE_KEY, state);
     localStorage.setItem(OAUTH_SITE_KEY, siteId);
-    // Store the current slug so Landing page can redirect back on OAuth callback
-    const pathSlug = window.location.pathname.split('/s/')[1];
+
+    const pathSlug = window.location.pathname.split("/s/")[1];
     if (pathSlug) {
-      localStorage.setItem('deriv_oauth_slug', pathSlug);
+      localStorage.setItem("deriv_oauth_slug", pathSlug);
     }
 
+    // The redirect URL is the current page — Deriv redirects back here with tokens
     const oauthUrl = `https://oauth.deriv.com/oauth2/authorize?app_id=${appId}&l=EN&brand=deriv&state=${state}`;
     window.location.href = oauthUrl;
   };
@@ -170,7 +165,7 @@ export function DerivAuthButton({ siteId, siteName, primaryColor, darkMode, onSu
     return (
       <Button
         disabled
-        style={{ backgroundColor: primaryColor, color: '#fff' }}
+        style={{ backgroundColor: primaryColor, color: "#fff" }}
         className="gap-2"
       >
         <Loader2 className="w-4 h-4 animate-spin" />
@@ -182,7 +177,7 @@ export function DerivAuthButton({ siteId, siteName, primaryColor, darkMode, onSu
   return (
     <Button
       onClick={initiateOAuth}
-      style={{ backgroundColor: primaryColor, color: '#fff' }}
+      style={{ backgroundColor: primaryColor, color: "#fff" }}
       className="gap-2"
     >
       <LogIn className="w-4 h-4" />

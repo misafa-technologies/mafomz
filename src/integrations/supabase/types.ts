@@ -531,9 +531,11 @@ export type Database = {
         Row: {
           apps: Json | null
           created_at: string
+          creator_commission_percentage: number | null
           custom_domain: string | null
           dark_mode: boolean | null
           deriv_account_id: string | null
+          deriv_app_id: string | null
           deriv_token_hash: string | null
           description: string | null
           favicon_url: string | null
@@ -553,9 +555,11 @@ export type Database = {
         Insert: {
           apps?: Json | null
           created_at?: string
+          creator_commission_percentage?: number | null
           custom_domain?: string | null
           dark_mode?: boolean | null
           deriv_account_id?: string | null
+          deriv_app_id?: string | null
           deriv_token_hash?: string | null
           description?: string | null
           favicon_url?: string | null
@@ -575,9 +579,11 @@ export type Database = {
         Update: {
           apps?: Json | null
           created_at?: string
+          creator_commission_percentage?: number | null
           custom_domain?: string | null
           dark_mode?: boolean | null
           deriv_account_id?: string | null
+          deriv_app_id?: string | null
           deriv_token_hash?: string | null
           description?: string | null
           favicon_url?: string | null

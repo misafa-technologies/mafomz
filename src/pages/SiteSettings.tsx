@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DomainConfigGuide } from "@/components/sites/DomainConfigGuide";
 import { DomainManager } from "@/components/sites/DomainManager";
 import { BotManager } from "@/components/sites/BotManager";
+import { CreatorDerivConfig } from "@/components/sites/CreatorDerivConfig";
 import { 
   Settings, 
   Save, 
@@ -25,7 +26,8 @@ import {
   ArrowLeft,
   Trash2,
   Server,
-  Bot
+  Bot,
+  Key
 } from "lucide-react";
 import {
   AlertDialog,
@@ -210,6 +212,9 @@ const SiteSettings = () => {
         <Tabs defaultValue="basic" className="space-y-6">
           <TabsList className="glass">
             <TabsTrigger value="basic">Basic Info</TabsTrigger>
+            <TabsTrigger value="deriv" className="gap-1">
+              <Key className="w-4 h-4" /> Deriv API
+            </TabsTrigger>
             <TabsTrigger value="domain">Domain</TabsTrigger>
             <TabsTrigger value="branding">Branding</TabsTrigger>
             <TabsTrigger value="bots" className="gap-1">
@@ -281,6 +286,15 @@ const SiteSettings = () => {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Deriv API Tab */}
+          <TabsContent value="deriv">
+            <CreatorDerivConfig
+              siteId={site.id}
+              subdomain={site.subdomain}
+              customDomain={site.custom_domain}
+            />
           </TabsContent>
 
           {/* Domain Tab */}
