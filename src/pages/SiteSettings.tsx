@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DomainConfigGuide } from "@/components/sites/DomainConfigGuide";
 import { DomainManager } from "@/components/sites/DomainManager";
 import { BotManager } from "@/components/sites/BotManager";
+import { CreatorDerivConfig } from "@/components/sites/CreatorDerivConfig";
 import { 
   Settings, 
   Save, 
@@ -25,7 +26,8 @@ import {
   ArrowLeft,
   Trash2,
   Server,
-  Bot
+  Bot,
+  Key
 } from "lucide-react";
 import {
   AlertDialog,
