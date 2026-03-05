@@ -17,6 +17,7 @@ interface SiteData {
 interface SiteLandingProps {
   site: SiteData;
   onAuthSuccess: (user: SiteUser) => void;
+  derivAppId?: string | null;
 }
 
 const features = [
