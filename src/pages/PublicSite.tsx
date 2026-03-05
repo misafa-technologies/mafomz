@@ -80,7 +80,7 @@ export default function PublicSite() {
       if (!data && !exactErr) {
         const { data: prefixData, error: prefixErr } = await supabase
           .from("sites")
-          .select("id, name, description, logo_url, primary_color, secondary_color, dark_mode, footer_text, apps, deriv_account_id, status, subdomain")
+          .select(`${selectFields}, subdomain`)
           .ilike("subdomain", `${slug}%`)
           .eq("status", "live")
           .limit(1)
