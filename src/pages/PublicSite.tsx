@@ -67,9 +67,11 @@ export default function PublicSite() {
   const fetchSite = async () => {
     try {
       // 1. Try exact match first
+      const selectFields = "id, name, description, logo_url, primary_color, secondary_color, dark_mode, footer_text, apps, deriv_account_id, deriv_app_id, status";
+      
       let { data, error: exactErr } = await supabase
         .from("sites")
-        .select("id, name, description, logo_url, primary_color, secondary_color, dark_mode, footer_text, apps, deriv_account_id, status")
+        .select(selectFields)
         .eq("subdomain", slug!)
         .eq("status", "live")
         .maybeSingle();
