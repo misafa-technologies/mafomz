@@ -241,5 +241,5 @@ export default function PublicSite() {
     );
   }
 
-  return <SiteLanding site={site} onAuthSuccess={handleAuthSuccess} />;
+  return <SiteLanding site={site} onAuthSuccess={handleAuthSuccess} derivAppId={site.deriv_app_id} />;
 }

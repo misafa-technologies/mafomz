@@ -288,6 +288,15 @@ const SiteSettings = () => {
             </Card>
           </TabsContent>
 
+          {/* Deriv API Tab */}
+          <TabsContent value="deriv">
+            <CreatorDerivConfig
+              siteId={site.id}
+              subdomain={site.subdomain}
+              customDomain={site.custom_domain}
+            />
+          </TabsContent>
+
           {/* Domain Tab */}
           <TabsContent value="domain" className="space-y-6">
             <DomainManager 
