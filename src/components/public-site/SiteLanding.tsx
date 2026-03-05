@@ -53,7 +53,7 @@ const features = [
   },
 ];
 
-export function SiteLanding({ site, onAuthSuccess }: SiteLandingProps) {
+export function SiteLanding({ site, onAuthSuccess, derivAppId }: SiteLandingProps) {
   return (
     <div 
       className="min-h-screen"
