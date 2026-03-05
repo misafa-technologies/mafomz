@@ -212,6 +212,9 @@ const SiteSettings = () => {
         <Tabs defaultValue="basic" className="space-y-6">
           <TabsList className="glass">
             <TabsTrigger value="basic">Basic Info</TabsTrigger>
+            <TabsTrigger value="deriv" className="gap-1">
+              <Key className="w-4 h-4" /> Deriv API
+            </TabsTrigger>
             <TabsTrigger value="domain">Domain</TabsTrigger>
             <TabsTrigger value="branding">Branding</TabsTrigger>
             <TabsTrigger value="bots" className="gap-1">
