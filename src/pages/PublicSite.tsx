@@ -100,7 +100,7 @@ export default function PublicSite() {
         if (baseName !== slug) {
           const { data: baseData, error: baseErr } = await supabase
             .from("sites")
-            .select("id, name, description, logo_url, primary_color, secondary_color, dark_mode, footer_text, apps, deriv_account_id, status, subdomain")
+            .select(`${selectFields}, subdomain`)
             .ilike("subdomain", `${baseName}%`)
             .eq("status", "live")
             .limit(5);
