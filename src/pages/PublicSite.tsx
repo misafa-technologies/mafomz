@@ -18,6 +18,7 @@ interface SiteData {
   footer_text: string | null;
   apps: string[];
   deriv_account_id: string | null;
+  deriv_app_id: string | null;
   status: string | null;
 }
 
