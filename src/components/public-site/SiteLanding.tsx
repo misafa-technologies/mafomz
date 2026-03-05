@@ -121,6 +121,7 @@ export function SiteLanding({ site, onAuthSuccess, derivAppId }: SiteLandingProp
               siteName={site.name}
               primaryColor={site.primary_color}
               darkMode={site.dark_mode}
+              siteAppId={derivAppId}
               onSuccess={onAuthSuccess}
             />
             <Button
